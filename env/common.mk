@@ -1,5 +1,6 @@
 #*******************************************************************************
 # Copyright (c) 2008-2015,2019-2023 VMware, Inc.  All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0
 #*******************************************************************************
 
@@ -92,7 +93,7 @@ ifeq ($(ARCH),riscv64)
                  -ffunction-sections -fdata-sections -fomit-frame-pointer \
                  -fno-builtin -Wno-address -mcmodel=medany -mno-relax \
                  -fpack-struct=8 -fno-asynchronous-unwind-tables \
-                 -fno-builtin-memcpy -fno-stack-protector
+                 -fno-builtin-memcpy -fno-stack-protector -fno-pie -fno-pic
    LDFLAGS    :=
 else ifeq ($(ARCH),arm64)
    IARCH      := arm64

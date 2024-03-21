@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Portions Copyright (c) 2015,2019-2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -561,6 +562,7 @@ static void process_reloc ( bfd *bfd, asection *section, arelent *rel,
 		    ( strcmp (howto->name, "R_RISCV_GPREL_I" ) == 0 ) ||
 		    ( strcmp (howto->name, "R_RISCV_GPREL_S" ) == 0 ) ||
 		    ( strcmp (howto->name, "R_RISCV_CALL" ) == 0 ) ||
+		    ( strcmp (howto->name, "R_RISCV_CALL_PLT" ) == 0 ) ||
 		    ( strcmp (howto->name, "R_RISCV_RVC_BRANCH" ) == 0 ) ||
 		    ( strcmp (howto->name, "R_RISCV_RVC_JUMP" ) == 0 ) ||
 		    ( strcmp (howto->name, "R_RISCV_RELAX" ) == 0 ) ||
