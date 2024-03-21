@@ -1,11 +1,13 @@
 #!/bin/sh
 #*******************************************************************************
 # Copyright (c) 2008-2012,2015,2017-2020,2022 VMware, Inc.  All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0
 #*******************************************************************************
 
 copyright='#*******************************************************************************
 # Copyright (c) 2008-2012,2015,2017-2020,2022 VMware, Inc.  All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0
 #*******************************************************************************
 '
@@ -38,7 +40,17 @@ HOST_LIBCRYPTO  := <Path to host libcrypto.so>
 # Target definitions.
 #=============================================================
 
-ifeq ($(BUILDENV),uefiarm64)
+# Either python2 or python3 can be used
+PYTHON  := /usr/bin/python3
+GETKEYS_PYTHONPATH := $(PYTHONPATH)
+
+ifeq ($(BUILDENV),uefiriscv64)
+GCCROOT := <Path to riscv64 gcc sysroot>
+CC      := <Path to riscv64 gcc>
+LD      := <Path to riscv64 ld>
+AR      := <Path to riscv64 ar>
+OBJCOPY := <Path to riscv64 objcopy>
+else ifeq ($(BUILDENV),uefiarm64)
 GCCROOT := <Path to aarch64 gcc sysroot>
 CC      := <Path to aarch64 gcc>
 LD      := <Path to aarch64 ld>
@@ -65,7 +77,7 @@ export CRYPTO_MODULE := 1
 
 include env/common.mk
 
-SUBDIRS := com32 uefi64 # uefiarm64
+SUBDIRS := com32 uefi64 uefiarm64 uefiriscv64
 
 TOPDIR := $(CURDIR)
 export TOPDIR
@@ -86,7 +98,7 @@ com32:
 # mode, early bootbank modules must be signed with one of the embedded
 # keys. See mboot/secure.c for details.
 #
-uefi64 uefi32 uefiarm64:
+uefi64 uefi32 uefiarm64 uefiriscv64:
 	$(MAKE) -f Makefile.main BUILDENV=$@ \
 		KEY=test_sb2017 EKEY=test
 	$(MAKE) -f Makefile.main BUILDENV=$@ \
