@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -36,6 +37,7 @@ static int get_fdt_serial_port(UNUSED_PARAM(int com), serial_type_t *type,
    const char *baud = NULL;
    static fdt_serial_id_t const match_ids[] = {
       { "snps,dw-apb-uart", SERIAL_NS16550 },
+      { "ns16550a", SERIAL_NS16550 },
       { NULL, 0 }
    };
 
