@@ -102,7 +102,7 @@ else ifeq ($(ARCH),arm64)
    CFLAGS     := -march=armv8-a -mlittle-endian -mgeneral-regs-only \
                  -mcmodel=large -fno-short-enums -fsigned-char \
                  -ffunction-sections -fdata-sections -fomit-frame-pointer \
-                 -fno-builtin -Wno-address -mstack-protector-guard=global
+                 -fno-builtin -Wno-address -mstack-protector-guard=global -fno-PIC
    LDFLAGS    :=
 else ifeq ($(ARCH),em64t)
    IARCH      := x86

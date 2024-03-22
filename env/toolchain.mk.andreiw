@@ -1,0 +1,65 @@
+#*******************************************************************************
+# Copyright (c) 2008-2012,2015,2017-2020,2022 VMware, Inc.  All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
+# SPDX-License-Identifier: GPL-2.0
+#*******************************************************************************
+
+#
+# Tool chain definitions.
+#
+
+#=============================================================
+# Host definitions. Used to compile tools that run on the
+# host during the build, such as uefi/elf2efi and bios/relocs.
+#=============================================================
+
+HOST_CC         := gcc
+HOST_CFLAGS     := -DPACKAGE
+#
+# Known to work with libbfd 2.17.50. libbfd
+# used should be aware of all architecture types
+# used in build.
+#
+HOST_LIBBFDINC  := /usr/include
+HOST_LIBBFD     := -lbfd-multiarch
+HOST_LIBERTY    := -liberty
+HOST_LIBCRYPTO  := -lcrypto
+
+#=============================================================
+# Target definitions.
+#=============================================================
+
+# Either python2 or python3 can be used
+PYTHON  := /usr/bin/python3
+GETKEYS_PYTHONPATH := $(PYTHONPATH)
+
+ifeq ($(BUILDENV),uefiriscv64)
+GCCROOT := '/'
+CC      := riscv64-linux-gnu-gcc
+LD      := riscv64-linux-gnu-ld
+AR      := riscv64-linux-gnu-ar
+OBJCOPY := riscv64-linux-gnu-objcopy
+else ifeq ($(BUILDENV),uefiarm64)
+GCCROOT := '/'
+CC      := aarch64-linux-gnu-gcc
+LD      := aarch64-linux-gnu-ld
+AR      := aarch64-linux-gnu-ar
+OBJCOPY := aarch64-linux-gnu-objcopy
+else ifeq ($(BUILDENV),uefi64)
+#
+# Known to work with gcc 4.8.0, nasm 2.01, and binutils 2.22
+#
+GCCROOT := '/'
+CC      := gcc
+LD      := ld
+AR      := ar
+OBJCOPY := objcopy
+AS      := nasm
+else
+GCCROOT := '/'
+CC      := i686-linux-gnu-gcc
+LD      := i686-linux-gnu-ld
+AR      := i686-linux-gnu-ar
+OBJCOPY := i686-linux-gnu-objcopy
+AS      := nasm
+endif
