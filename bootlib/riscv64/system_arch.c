@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -7,9 +8,8 @@
  * system_arch.c -- Various architecture-specific system routines.
  */
 
-#include <boot_services.h>
+#include <bootlib.h>
 #include <fdt_vmware.h>
-#include "mboot.h"
 
 /*-- system_arch_blacklist_memory ----------------------------------------------
  *
@@ -55,9 +55,4 @@ int system_arch_blacklist_memory(void)
    }
 
    return ERR_SUCCESS;
-}
-
-void check_cpu_quirks(void)
-{
-   return;
 }

@@ -24,7 +24,6 @@ SRC         := acpi.c	             \
                reloc.c               \
                secure.c              \
                system.c              \
-               $(IARCH)/system_arch.c\
                trampoline.c          \
                signinfo.json         \
 

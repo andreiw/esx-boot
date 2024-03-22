@@ -58,7 +58,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <boot_services.h>
-#include <system_int.h>
 #include "mboot.h"
 
 #if defined(SECURE_BOOT) && defined(CRYPTO_MODULE)
@@ -539,9 +538,6 @@ int main(int argc, char **argv)
       boot.headless = true;
    }
 #endif
-
-   Log(LOG_DEBUG, "Processing CPU quirks...");
-   check_cpu_quirks();
 
    tpm_init();
 

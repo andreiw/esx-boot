@@ -33,6 +33,8 @@ SRC         := \
                parse.c       \
                serial.c      \
                smbios.c      \
+               system.c      \
+               $(IARCH)/system_arch.c\
                sort.c        \
                string.c      \
                video.c       \

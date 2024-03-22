@@ -319,6 +319,11 @@ EXTERN int smbios_get_platform_info(const char **manufacturer,
                                     const char **bios_ver,
                                     const char **bios_date);
 
+/*
+ * system.c
+ */
+EXTERN int system_blacklist_memory(e820_range_t *mmap, size_t count);
+
 /*-- is_valid_firmware_table ---------------------------------------------------
  *
  *      Firmware tables sanity check: all bytes in the table must add up to

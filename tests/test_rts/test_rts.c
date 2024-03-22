@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2016-2017,2020 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -277,9 +278,11 @@ int main(int argc, char **argv)
    }
 
    e820_mmap_merge(e820_mmap, &count);
-   status = e820_to_blacklist(e820_mmap, count);
+
+   status = system_blacklist_memory(e820_mmap, count);
    if (status != ERR_SUCCESS) {
-      Log(LOG_ERR, "scan_memory_map: %s\n", error_str[status]);
+      Log(LOG_ERR, "Error scanning system memory: %s\n",
+          error_str[status]);
       goto out;
    }
 
