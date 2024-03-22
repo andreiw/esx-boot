@@ -1,15 +1,17 @@
 /*******************************************************************************
  * Copyright (c) 2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
 /*
- * fdt.c -- Arch-agnostic code to handle Flattened Device Tree.
+ * fdt.c -- FDT-related routines.
  */
 
+#include <stdint.h>
 #include <boot_services.h>
 #include <fdt_vmware.h>
-#include "mboot.h"
+#include <bootlib.h>
 
 /*-- fdt_blacklist_memory ------------------------------------------------------
  *

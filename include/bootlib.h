@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2016,2018-2021,2023 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -296,6 +297,11 @@ EXTERN int acpi_is_present(void);
 EXTERN acpi_sdt *acpi_find_sdt(const char *sig);
 EXTERN int acpi_install_table(void *, size_t, unsigned int *);
 EXTERN int acpi_uninstall_table(unsigned int);
+
+/*
+ * fdt.c
+ */
+EXTERN int fdt_blacklist_memory(void *fdt);
 
 /*
  * smbios.c

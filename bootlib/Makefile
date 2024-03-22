@@ -1,6 +1,7 @@
 #*******************************************************************************
 # Copyright (c) 2008-2013,2016,2018-2019,2021,2023 VMware, Inc.
 # All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0
 #*******************************************************************************
 
@@ -36,6 +37,10 @@ SRC         := \
                string.c      \
                video.c       \
                volume.c      \
+
+ifneq ($(IARCH),x86)
+SRC += fdt.c
+endif
 
 BASENAME    := boot
 TARGETTYPE  := lib

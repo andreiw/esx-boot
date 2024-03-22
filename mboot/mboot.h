@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2017,2021,2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -233,11 +234,6 @@ int append_kernel_options(const char *options);
 int measure_kernel_options(void);
 int parse_config(const char *filename);
 void config_clear(void);
-
-/*
- * fdt.c
- */
-int fdt_blacklist_memory(void *fdt);
 
 /*
  * multiboot.c
