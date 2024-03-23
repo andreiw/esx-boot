@@ -1,5 +1,6 @@
 #*******************************************************************************
 # Copyright (c) 2015,2020-2021 VMware, Inc.  All rights reserved.
+# Copyright (c) 2024, Intel Corporation. All rights reserved.
 # SPDX-License-Identifier: GPL-2.0
 #*******************************************************************************
 
@@ -24,7 +25,7 @@ endif
 CDEF        += $(CRYPTOTEST)
 
 # Hint: Adjust RELOC_COPY_SIZE upward if elf2efi fails
-RELOC_COPY_SIZE := 2500
+RELOC_COPY_SIZE := 2700
 CFLAGS          += -DRELOC_COPY_SIZE=$(RELOC_COPY_SIZE)
 ELF2EFIFLAGS    := --copy-reloc $(RELOC_COPY_SIZE) --insert-hash
 
