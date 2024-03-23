@@ -1,9 +1,8 @@
 #include "kernel.h"
 
-#define ESXBOOTINFO_MAGIC_V2  0x1BADB006
+#define ESXBOOTINFO_MAGIC_V1  0x1BADB005
 #define ESXBOOTINFO_ALIGNMENT 8
-#define ESXBOOTINFO_LENGTH    ebh_end - ebh
-#define ESXBOOTINFO_NUM_ELMTS 0
+#define ESXBOOTINFO_FLAGS     0
 
    .section .rodata
 string_link_va:  .asciz "\nLink VA = 0x"
@@ -20,7 +19,7 @@ string_bye:      .asciz "\nCalling shutdown...\n"
  * MMU may be on.
  *
  * Inputs:
- *    a0: ESXBOOTINFO_MAGIC_V2
+ *    a0: ESXBOOTINFO_MAGIC_V1
  *    a1: physical address of the ESXBootInfo structure.
  */
    .global entry
@@ -30,17 +29,27 @@ entry:
    j    stack_setup
 
 /*
- * The ESXBootInfo_Header_V2 passed statically from kernel to bootloader,
+ * The ESXBootInfo_Header_V1 passed statically from kernel to bootloader,
  * must be located within the first ESXBOOTINFO_SEARCH bytes of
  * the lowest loaded ELF segment.
  */
    .balign ESXBOOTINFO_ALIGNMENT
-ebh:
-   .long   ESXBOOTINFO_MAGIC_V2
-   .long   ESXBOOTINFO_LENGTH
-   .long   ESXBOOTINFO_NUM_ELMTS
-   .long   (-(ESXBOOTINFO_MAGIC_V2 + ESXBOOTINFO_LENGTH + ESXBOOTINFO_NUM_ELMTS))
-ebh_end:
+   .long   ESXBOOTINFO_MAGIC_V1
+   .long   ESXBOOTINFO_FLAGS
+   .long   (-(ESXBOOTINFO_MAGIC_V1 + ESXBOOTINFO_FLAGS))
+   .long   0 /* reserved[0] */
+   .long   0 /* reserved[1] */
+   .long   0 /* min_width */
+   .long   0 /* min_height */
+   .long   0 /* min_depth */
+   .long   0 /* mode_type */
+   .long   0 /* width */
+   .long   0 /* height */
+   .long   0 /* depth */
+   .long   0 /* rts_vaddr */
+   .long   0 /* rts_size */
+   .long   0 /* os_private */
+   .long   0 /* tpm_measure */
 
 stack_setup:
    la   sp, stack_end

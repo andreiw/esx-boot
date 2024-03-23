@@ -264,7 +264,8 @@ bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *ebh);
 
 static INLINE bool boot_is_esxbootinfo(void)
 {
-   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
+   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1 ||
+       boot.boot_magic == ESXBOOTINFO_MAGIC_V2) {
       return true;
    }
 

@@ -72,6 +72,11 @@ static INLINE ESXBootInfo_Header *esxbootinfo_scan(void *buffer, size_t buflen)
          if ((mbh->magic + mbh->v1.flags + mbh->v1.checksum) == 0) {
             return mbh;
          }
+      } else if (mbh->magic == ESXBOOTINFO_MAGIC_V2) {
+         if ((mbh->magic + mbh->v2.length + mbh->v2.num_elmts +
+              mbh->v2.checksum) == 0) {
+            return mbh;
+         }
       }
 
       mbh = (ESXBootInfo_Header *)((char *)mbh + ESXBOOTINFO_ALIGNMENT);
@@ -220,8 +225,6 @@ static int check_esxbootinfo_v1(ESXBootInfo_Header *ebh)
       return ERR_BAD_TYPE;
    }
 
-   boot.efi_info.rts_size = 0;
-   boot.efi_info.rts_vaddr = 0;
    boot.efi_info.caps |= EFI_RTS_CAP_RTS_SIMPLE;
    if ((mbh->flags & ESXBOOTINFO_FLAG_EFI_RTS_OLD) != 0) {
       boot.efi_info.rts_vaddr = mbh->rts_vaddr;
@@ -248,6 +251,69 @@ static int check_esxbootinfo_v1(ESXBootInfo_Header *ebh)
 
    return ERR_SUCCESS;
 
+}
+
+static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
+{
+   ESXBootInfo_FeatElmt *feat;
+   ESXBootInfo_Header_V2 *mbh = &ebh->v2;
+
+   FOR_EACH_ESXBOOTINFO_FEAT_DO(mbh, feat) {
+      if (feat->feat_type >= NUM_ESXBOOTINFO_FEAT_TYPE &&
+          (feat->feat_flags & ESXBOOTINFO_FEAT_REQUIRED) != 0) {
+         Log(LOG_ERR, "ESXBootInfo header requires unknown feature 0x%x\n",
+             feat->feat_type);
+         return ERR_BAD_TYPE;
+      }
+
+      switch (feat->feat_type) {
+      case ESXBOOTINFO_FEAT_VIDEO_TYPE: {
+         if (feat->feat_size > sizeof (ESXBootInfo_FeatVideo)) {
+            Log(LOG_ERR, "Unsupported FEAT_VIDEO size");
+            return ERR_BAD_TYPE;
+         }
+
+         break;
+      }
+      case ESXBOOTINFO_FEAT_UEFI_TYPE: {
+         ESXBootInfo_FeatUefi *uefi = (void *) feat;
+
+         if (feat->feat_size > sizeof (ESXBootInfo_FeatUefi)) {
+           Log(LOG_ERR, "Unsupported FEAT_UEFI size");
+           return ERR_BAD_TYPE;
+         }
+
+         if ((uefi->flags & ESXBOOTINFO_FLAG_EFI_RTS) != 0) {
+            boot.efi_info.rts_vaddr = uefi->rts_vaddr;
+            boot.efi_info.rts_size = uefi->rts_size;
+            boot.efi_info.caps = EFI_RTS_CAP_RTS_SIMPLE |
+               EFI_RTS_CAP_RTS_SPARSE |
+               EFI_RTS_CAP_RTS_COMPACT |
+               EFI_RTS_CAP_RTS_CONTIG;
+         }
+
+         if ((uefi->flags & ESXBOOTINFO_FLAG_MEMTYPE_SP) != 0) {
+            boot.efi_info.use_memtype_sp = true;
+         }
+         break;
+      }
+      case ESXBOOTINFO_FEAT_TPM_TYPE: {
+         ESXBootInfo_FeatTpm *tpm = (void *) feat;
+
+         if (feat->feat_size > sizeof (ESXBootInfo_FeatTpm)) {
+            Log(LOG_ERR, "Unsupported FEAT_TPM size");
+            return ERR_BAD_TYPE;
+         }
+
+         boot.tpm_measure = (tpm->tpm_measure & ESXBOOTINFO_TPM_MEASURE_V1) != 0;
+         break;
+      }
+      default:
+         break;
+      }
+   } FOR_EACH_ESXBOOTINFO_FEAT_DONE(mbh, feat);
+
+   return ERR_SUCCESS;
 }
 
 /*-- check_esxbootinfo_kernel --------------------------------------------------
@@ -310,11 +376,20 @@ int check_esxbootinfo_kernel(void *kbuf, size_t ksize)
       return ERR_BAD_TYPE;
    }
 
-   status = check_esxbootinfo_v1(mbh);
-   if (status != ERR_SUCCESS) {
-      Log(LOG_ERR, "Couldn't parse ESXBootInfo V1 header: %s",
-          error_str[status]);
-      return status;
+   if (mbh->magic == ESXBOOTINFO_MAGIC_V1) {
+     status = check_esxbootinfo_v1(mbh);
+     if (status != ERR_SUCCESS) {
+       Log(LOG_ERR, "Couldn't parse ESXBootInfo V1 header: %s",
+           error_str[status]);
+       return status;
+     }
+   } else {
+     status = check_esxbootinfo_v2(mbh);
+     if (status != ERR_SUCCESS) {
+       Log(LOG_ERR, "Couldn't parse ESXBootInfo V2 header: %s",
+           error_str[status]);
+       return status;
+     }
    }
 
    if (!esxbootinfo_arch_check_kernel(mbh)) {
@@ -920,6 +995,10 @@ static void esxbootinfo_init_vbe(void)
    ESXBootInfo_Header *mbh;
    int status;
    bool text_mode;
+   unsigned int min_width;
+   unsigned int min_height;
+   unsigned int min_depth;
+   bool get_vbe_info;
 
    Log(LOG_DEBUG, "Setting up preferred video mode...");
 
@@ -934,29 +1013,61 @@ static void esxbootinfo_init_vbe(void)
    mbh = boot.kernel_header;
 
    text_mode = true;
+   get_vbe_info = false;
    if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
-      if (((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) &&
-          (mbh->v1.mode_type == ESXBOOTINFO_VIDEO_GRAPHIC)) {
-         unsigned int min_width, min_height, min_depth;
-         if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO_MIN) ==
-             ESXBOOTINFO_FLAG_VIDEO_MIN) {
-            min_width = mbh->v1.min_width;
-            min_height = mbh->v1.min_height;
-            min_depth = mbh->v1.min_depth;
-         } else {
-            min_width = mbh->v1.width;
-            min_height = mbh->v1.height;
-            min_depth = mbh->v1.depth;
+      if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) {
+         get_vbe_info = true;
+
+         if ((mbh->v1.mode_type == ESXBOOTINFO_VIDEO_GRAPHIC)) {
+            if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO_MIN) ==
+                ESXBOOTINFO_FLAG_VIDEO_MIN) {
+               min_width = mbh->v1.min_width;
+               min_height = mbh->v1.min_height;
+               min_depth = mbh->v1.min_depth;
+            } else {
+               min_width = mbh->v1.width;
+               min_height = mbh->v1.height;
+               min_depth = mbh->v1.depth;
+            }
+            status = gui_resize(mbh->v1.width, mbh->v1.height, mbh->v1.depth,
+                                min_width, min_height, min_depth);
+            if (status == ERR_SUCCESS) {
+               text_mode = false;
+            } else {
+               Log(LOG_WARNING, "Error setting preferred video mode %ux%ux%u: %s",
+                   mbh->v1.width, mbh->v1.height, mbh->v1.depth, error_str[status]);
+            }
          }
-         status = gui_resize(mbh->v1.width, mbh->v1.height, mbh->v1.depth,
+      }
+   } else {
+      ESXBootInfo_FeatVideo *video;
+
+      FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DO(&mbh->v2, ESXBOOTINFO_FEAT_VIDEO_TYPE, video) {
+         get_vbe_info = true;
+
+         if (video->mode_type == ESXBOOTINFO_VIDEO_TEXT) {
+            break;
+         }
+
+         if ((video->flags & ESXBOOTINFO_FLAG_VIDEO_MIN) == ESXBOOTINFO_FLAG_VIDEO_MIN) {
+            min_width = video->min_width;
+            min_height = video->min_height;
+            min_depth = video->min_depth;
+         } else {
+            min_width = video->width;
+            min_height = video->height;
+            min_depth = video->depth;
+         }
+         status = gui_resize(video->width, video->height, video->depth,
                              min_width, min_height, min_depth);
          if (status == ERR_SUCCESS) {
             text_mode = false;
          } else {
             Log(LOG_WARNING, "Error setting preferred video mode %ux%ux%u: %s",
-                mbh->v1.width, mbh->v1.height, mbh->v1.depth, error_str[status]);
+                video->width, video->height, video->depth, error_str[status]);
          }
-      }
+         break;
+      } FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DONE(&mbh->v2, video);
    }
 
    if (text_mode) {
@@ -968,12 +1079,10 @@ static void esxbootinfo_init_vbe(void)
       }
    }
 
-   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
-      if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) {
-         status = video_get_vbe_info(&vbe);
-         if (status != ERR_SUCCESS) {
-            Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
-         }
+   if (get_vbe_info) {
+      status = video_get_vbe_info(&vbe);
+      if (status != ERR_SUCCESS) {
+         Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
       }
    }
 }

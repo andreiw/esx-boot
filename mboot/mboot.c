@@ -653,8 +653,9 @@ int main(int argc, char **argv)
       }
    }
 
-   Log(LOG_DEBUG, "Initializing %s standard...",
-       boot_is_esxbootinfo() ? "ESXBootInfo" : "Multiboot");
+   Log(LOG_DEBUG, "Initializing %s standard (boot magic 0x%x)...",
+       boot_is_esxbootinfo() ? "ESXBootInfo" : "Multiboot",
+       boot.boot_magic);
 
    status = boot_init();
    if (status != ERR_SUCCESS) {

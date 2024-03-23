@@ -39,6 +39,7 @@
  * within the first 8192 bytes of the lowest loaded ELF segment.
  */
 #define ESXBOOTINFO_MAGIC_V1          0x1BADB005 /* header signature */
+#define ESXBOOTINFO_MAGIC_V2          0x1BADB006 /* header signature */
 #define ESXBOOTINFO_ALIGNMENT         8
 #define ESXBOOTINFO_SEARCH            8192
 
@@ -135,9 +136,116 @@ typedef struct ESXBootInfo_Header_V1 {
    uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
 } __attribute__((packed)) ESXBootInfo_Header_V1;
 
+typedef enum ESXBootInfo_FeatType {
+   ESXBOOTINFO_FEAT_INVALID_TYPE,
+   ESXBOOTINFO_FEAT_ARM64_MODE_TYPE,
+   ESXBOOTINFO_FEAT_VIDEO_TYPE,
+   ESXBOOTINFO_FEAT_UEFI_TYPE,
+   ESXBOOTINFO_FEAT_OS_PRIVATE_TYPE,
+   ESXBOOTINFO_FEAT_TPM_TYPE,
+   NUM_ESXBOOTINFO_FEAT_TYPE
+} ESXBootInfo_FeatType;
+
+#define ESXBOOTINFO_FEAT_REQUIRED (1 << 0) /* Feature must be supported by
+                                              bootloader */
+
+typedef struct ESXBootInfo_FeatElmt {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+} __attribute__((packed)) ESXBootInfo_FeatElmt;
+
+typedef struct ESXBootInfo_FeatArm64Mode {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+   /*
+    * These flags are valid to be used here:
+    *    ESXBOOTINFO_FLAG_ARM64_MODE0
+    *    ESXBOOTINFO_FLAG_ARM64_MODE1
+    */
+   uint32_t flags;
+}  __attribute__((packed)) ESXBootInfo_FeatArm64Mode;
+
+typedef struct ESXBootInfo_FeatVideo {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+   /*
+    * These flags are valid to be used here:
+    *    ESXBOOTINFO_FLAG_VIDEO_MIN
+    */
+   uint32_t flags;
+   uint32_t min_width;       /* minimum horizontal resolution */
+   uint32_t min_height;      /* minimum vertical resolution */
+   uint32_t min_depth;       /* minimum bits per pixel (0 for text) */
+   uint32_t mode_type;       /* preferred mode (0=graphic, 1=text) */
+   uint32_t width;           /* preferred horizontal resolution */
+   uint32_t height;          /* preferred vertical resolution */
+   uint32_t depth;           /* preferred bits per pixel (0 for text) */
+} __attribute__((packed)) ESXBootInfo_FeatVideo;
+
+typedef struct ESXBootInfo_FeatUefi {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+   /*
+    * These flags are valid to be used here:
+    *    ESXBOOTINFO_FLAG_EFI_RTS
+    *    ESXBOOTINFO_FLAG_MEMTYPE_SP
+    */
+   uint32_t flags;
+   uint64_t rts_vaddr;       /* Virtual address of UEFI Runtime Services */
+   uint64_t rts_size;        /* For new-style RTS. */
+} __attribute__((packed)) ESXBootInfo_FeatUefi;
+
+typedef struct ESXBootInfo_FeatTpm {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+   uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
+} __attribute__((packed)) ESXBootInfo_FeatTpm;
+
+/*
+ * ESXBootInfo_Header_V2 passed statically from kernel to bootloader.
+ */
+typedef struct ESXBootInfo_Header_V2 {
+   uint32_t magic;           /* ESXBootInfo Header Magic */
+   uint32_t length;          /* Entire length of the structure, including
+                                the variable elements */
+   uint32_t num_elmts;       /* Array size for elmts[] */
+   uint32_t checksum;        /* (magic + length + num_eles + checksum)
+                                sum up to zero */
+   ESXBootInfo_FeatElmt elmts[0];
+} __attribute__((packed)) ESXBootInfo_Header_V2;
+
+#define FOR_EACH_ESXBOOTINFO_FEAT_DO(ebh, feat)                           \
+   do {                                                                   \
+      uint64_t __i;                                                       \
+                                                                          \
+      for (__i = 0,                                                       \
+           feat = (__typeof__(feat)) &(ebh)->elmts[0];                    \
+           __i < (ebh)->num_elmts;                                        \
+           __i += 1,                                                      \
+           feat = (__typeof__(feat))((uint8_t *)feat + feat->feat_size)) {
+
+#define FOR_EACH_ESXBOOTINFO_FEAT_DONE(ebh, feat)                         \
+      }                                                                   \
+      feat = NULL;                                                        \
+   } while (0)
+
+#define FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DO(ebh, featType, feat)            \
+   FOR_EACH_ESXBOOTINFO_FEAT_DO(ebh, feat) {                              \
+      if (feat->feat_type == featType) {
+
+#define FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DONE(ebh, feat)                    \
+      }                                                                   \
+   } FOR_EACH_ESXBOOTINFO_FEAT_DONE(ebh, feat)
+
 typedef union ESXBootInfo_Header {
   uint32_t magic;
   ESXBootInfo_Header_V1 v1;
+  ESXBootInfo_Header_V2 v2;
 } ESXBootInfo_Header;
 
 /*
