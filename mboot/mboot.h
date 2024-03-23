@@ -253,7 +253,7 @@ int check_esxbootinfo_kernel(void *kbuf, size_t ksize);
 int esxbootinfo_set_runtime_pointers(run_addr_t *run_ebi);
 int esxbootinfo_init(void);
 int esxbootinfo_register(void);
-uint32_t esxbootinfo_arch_supported_req_flags(void);
+uint32_t esxbootinfo_arch_v1_supported_req_flags(void);
 bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *ebh);
 
 /*
@@ -264,7 +264,7 @@ bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *ebh);
 
 static INLINE bool boot_is_esxbootinfo(void)
 {
-   if (boot.boot_magic == ESXBOOTINFO_MAGIC) {
+   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
       return true;
    }
 

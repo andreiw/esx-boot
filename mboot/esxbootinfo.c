@@ -21,14 +21,14 @@
 #include "mboot.h"
 
 /* Flags 0-15 are required and must be supported */
-#define ESXBOOTINFO_FLAGS_REQ_MASK    0x0000FFFF
+#define ESXBOOTINFO_V1_FLAGS_REQ_MASK    0x0000FFFF
 
-#define ESXBOOTINFO_GET_REQ_FLAGS(flags) \
-   ( (flags) & ESXBOOTINFO_FLAGS_REQ_MASK )
+#define ESXBOOTINFO_V1_GET_REQ_FLAGS(flags) \
+   ( (flags) & ESXBOOTINFO_V1_FLAGS_REQ_MASK )
 
 /* We support only these ESXBootInfo Header flags */
-#define ESXBOOTINFO_FLAGS_SUPPORTED    (ESXBOOTINFO_FLAG_VIDEO | \
-                                        esxbootinfo_arch_supported_req_flags())
+#define ESXBOOTINFO_V1_FLAGS_SUPPORTED  (ESXBOOTINFO_FLAG_VIDEO | \
+                                        esxbootinfo_arch_v1_supported_req_flags())
 
 /*
  * This may become unnecessary at some point, once we're sure
@@ -68,9 +68,10 @@ static INLINE ESXBootInfo_Header *esxbootinfo_scan(void *buffer, size_t buflen)
         buflen >= sizeof (ESXBootInfo_Header);
         buflen -= ESXBOOTINFO_ALIGNMENT) {
 
-      if ((mbh->magic == ESXBOOTINFO_MAGIC) &&
-          ((mbh->magic + mbh->flags + mbh->checksum) == 0)) {
-         return mbh;
+      if (mbh->magic == ESXBOOTINFO_MAGIC_V1) {
+         if ((mbh->magic + mbh->v1.flags + mbh->v1.checksum) == 0) {
+            return mbh;
+         }
       }
 
       mbh = (ESXBootInfo_Header *)((char *)mbh + ESXBOOTINFO_ALIGNMENT);
@@ -206,6 +207,49 @@ static int eb_set_mmap_entry(uint64_t base, uint64_t len, uint32_t type)
    return ERR_SUCCESS;
 }
 
+static int check_esxbootinfo_v1(ESXBootInfo_Header *ebh)
+{
+   ESXBootInfo_Header_V1 *mbh = &ebh->v1;
+
+   if ((ESXBOOTINFO_V1_GET_REQ_FLAGS(mbh->flags) &
+        ~ESXBOOTINFO_V1_FLAGS_SUPPORTED) != 0) {
+      Log(LOG_ERR, "ESXBootInfo header contains unsupported flags.\n");
+      Log(LOG_ERR, "req. flags set: 0x%x (supported 0x%x) \n",
+          ESXBOOTINFO_V1_GET_REQ_FLAGS(mbh->flags),
+          ESXBOOTINFO_V1_FLAGS_SUPPORTED);
+      return ERR_BAD_TYPE;
+   }
+
+   boot.efi_info.rts_size = 0;
+   boot.efi_info.rts_vaddr = 0;
+   boot.efi_info.caps |= EFI_RTS_CAP_RTS_SIMPLE;
+   if ((mbh->flags & ESXBOOTINFO_FLAG_EFI_RTS_OLD) != 0) {
+      boot.efi_info.rts_vaddr = mbh->rts_vaddr;
+      /*
+       * Legacy code for a deprecated version of RTS support.  Compute
+       * the implicit size of the RTS region here, and allow only
+       * EFI_RTS_CAP_RTS_SIMPLE.
+       */
+      boot.efi_info.rts_size = (64UL*1024*1024*1024*1024);
+   }
+
+   if ((mbh->flags & ESXBOOTINFO_FLAG_EFI_RTS) != 0) {
+      boot.efi_info.rts_vaddr = mbh->rts_vaddr;
+      boot.efi_info.rts_size = mbh->rts_size;
+      boot.efi_info.caps |= EFI_RTS_CAP_RTS_SPARSE |
+         EFI_RTS_CAP_RTS_COMPACT |
+         EFI_RTS_CAP_RTS_CONTIG;
+   }
+
+   boot.tpm_measure = (mbh->flags & ESXBOOTINFO_FLAG_TPM_MEASUREMENT) != 0 &&
+                      (mbh->tpm_measure & ESXBOOTINFO_TPM_MEASURE_V1) != 0;
+
+   boot.efi_info.use_memtype_sp = (mbh->flags & ESXBOOTINFO_FLAG_MEMTYPE_SP) != 0;
+
+   return ERR_SUCCESS;
+
+}
+
 /*-- check_esxbootinfo_kernel --------------------------------------------------
  *
  *      Check whether the given buffer contains a valid ESXBootInfo kernel.
@@ -266,13 +310,11 @@ int check_esxbootinfo_kernel(void *kbuf, size_t ksize)
       return ERR_BAD_TYPE;
    }
 
-   if ((ESXBOOTINFO_GET_REQ_FLAGS(mbh->flags) &
-        ~ESXBOOTINFO_FLAGS_SUPPORTED) != 0) {
-      Log(LOG_ERR, "ESXBootInfo header contains unsupported flags.\n");
-      Log(LOG_ERR, "req. flags set: 0x%x (supported 0x%x) \n",
-          ESXBOOTINFO_GET_REQ_FLAGS(mbh->flags),
-          ESXBOOTINFO_FLAGS_SUPPORTED);
-      return ERR_BAD_TYPE;
+   status = check_esxbootinfo_v1(mbh);
+   if (status != ERR_SUCCESS) {
+      Log(LOG_ERR, "Couldn't parse ESXBootInfo V1 header: %s",
+          error_str[status]);
+      return status;
    }
 
    if (!esxbootinfo_arch_check_kernel(mbh)) {
@@ -284,31 +326,6 @@ int check_esxbootinfo_kernel(void *kbuf, size_t ksize)
 
    boot.kernel_header = mbh;
    boot.boot_magic = mbh->magic;
-   boot.efi_info.rts_size = 0;
-   boot.efi_info.rts_vaddr = 0;
-   boot.efi_info.caps |= EFI_RTS_CAP_RTS_SIMPLE;
-   if ((mbh->flags & ESXBOOTINFO_FLAG_EFI_RTS_OLD) != 0) {
-      boot.efi_info.rts_vaddr = mbh->rts_vaddr;
-      /*
-       * Legacy code for a deprecated version of RTS support.  Compute
-       * the implicit size of the RTS region here, and allow only
-       * EFI_RTS_CAP_RTS_SIMPLE.
-       */
-      boot.efi_info.rts_size = (64UL*1024*1024*1024*1024);
-   }
-
-   if ((mbh->flags & ESXBOOTINFO_FLAG_EFI_RTS) != 0) {
-      boot.efi_info.rts_vaddr = mbh->rts_vaddr;
-      boot.efi_info.rts_size = mbh->rts_size;
-      boot.efi_info.caps |= EFI_RTS_CAP_RTS_SPARSE |
-         EFI_RTS_CAP_RTS_COMPACT |
-         EFI_RTS_CAP_RTS_CONTIG;
-   }
-
-   boot.tpm_measure = (mbh->flags & ESXBOOTINFO_FLAG_TPM_MEASUREMENT) != 0 &&
-                      (mbh->tpm_measure & ESXBOOTINFO_TPM_MEASURE_V1) != 0;
-
-   boot.efi_info.use_memtype_sp = (mbh->flags & ESXBOOTINFO_FLAG_MEMTYPE_SP) != 0;
 
    return ERR_SUCCESS;
 }
@@ -917,26 +934,28 @@ static void esxbootinfo_init_vbe(void)
    mbh = boot.kernel_header;
 
    text_mode = true;
-   if (((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) &&
-       (mbh->mode_type == ESXBOOTINFO_VIDEO_GRAPHIC)) {
-      unsigned int min_width, min_height, min_depth;
-      if ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO_MIN) ==
-          ESXBOOTINFO_FLAG_VIDEO_MIN) {
-         min_width = mbh->min_width;
-         min_height = mbh->min_height;
-         min_depth = mbh->min_depth;
-      } else {
-         min_width = mbh->width;
-         min_height = mbh->height;
-         min_depth = mbh->depth;
-      }
-      status = gui_resize(mbh->width, mbh->height, mbh->depth,
-                          min_width, min_height, min_depth);
-      if (status == ERR_SUCCESS) {
-         text_mode = false;
-      } else {
-         Log(LOG_WARNING, "Error setting preferred video mode %ux%ux%u: %s",
-             mbh->width, mbh->height, mbh->depth, error_str[status]);
+   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
+      if (((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) &&
+          (mbh->v1.mode_type == ESXBOOTINFO_VIDEO_GRAPHIC)) {
+         unsigned int min_width, min_height, min_depth;
+         if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO_MIN) ==
+             ESXBOOTINFO_FLAG_VIDEO_MIN) {
+            min_width = mbh->v1.min_width;
+            min_height = mbh->v1.min_height;
+            min_depth = mbh->v1.min_depth;
+         } else {
+            min_width = mbh->v1.width;
+            min_height = mbh->v1.height;
+            min_depth = mbh->v1.depth;
+         }
+         status = gui_resize(mbh->v1.width, mbh->v1.height, mbh->v1.depth,
+                             min_width, min_height, min_depth);
+         if (status == ERR_SUCCESS) {
+            text_mode = false;
+         } else {
+            Log(LOG_WARNING, "Error setting preferred video mode %ux%ux%u: %s",
+                mbh->v1.width, mbh->v1.height, mbh->v1.depth, error_str[status]);
+         }
       }
    }
 
@@ -949,10 +968,12 @@ static void esxbootinfo_init_vbe(void)
       }
    }
 
-   if ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) {
-      status = video_get_vbe_info(&vbe);
-      if (status != ERR_SUCCESS) {
-         Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
+   if (boot.boot_magic == ESXBOOTINFO_MAGIC_V1) {
+      if ((mbh->v1.flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) {
+         status = video_get_vbe_info(&vbe);
+         if (status != ERR_SUCCESS) {
+            Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
+         }
       }
    }
 }

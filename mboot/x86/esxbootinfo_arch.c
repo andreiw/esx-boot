@@ -14,8 +14,7 @@
 #include <stdbool.h>
 #include <cpu.h>
 
-
-/*-- esxbootinfo_arch_supported_req_flags --------------------------------------
+/*-- esxbootinfo_arch_v1_supported_req_flags -----------------------------------
  *
  *      Extra arch-specific supported required flags.
  *
@@ -25,7 +24,7 @@
  * Results
  *      0.
  *----------------------------------------------------------------------------*/
-int esxbootinfo_arch_supported_req_flags(void)
+int esxbootinfo_arch_v1_supported_req_flags(void)
 {
    return 0;
 }

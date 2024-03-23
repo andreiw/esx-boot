@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2015-2023 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -37,7 +38,7 @@
  * The ESXBootInfo Header must be 8-bytes aligned, and must fit entirely
  * within the first 8192 bytes of the lowest loaded ELF segment.
  */
-#define ESXBOOTINFO_MAGIC             0x1BADB005 /* header signature */
+#define ESXBOOTINFO_MAGIC_V1          0x1BADB005 /* header signature */
 #define ESXBOOTINFO_ALIGNMENT         8
 #define ESXBOOTINFO_SEARCH            8192
 
@@ -107,9 +108,9 @@ typedef enum {
 } RUNTIME_WATCHDOG_BASIC_TYPE;
 
 /*
- * ESXBootInfo_Header passed statically from kernel to bootloader.
+ * ESXBootInfo_Header_V1 passed statically from kernel to bootloader.
  */
-typedef struct ESXBootInfo_Header {
+typedef struct ESXBootInfo_Header_V1 {
    uint32_t magic;           /* ESXBootInfo Header Magic */
    uint32_t flags;           /* Feature flags */
    uint32_t checksum;        /* (magic + flags + checksum) sum up to zero */
@@ -130,7 +131,12 @@ typedef struct ESXBootInfo_Header {
    uint64_t rts_size;        /* For new-style RTS. */
    uint32_t loadesx_version; /* LoadESX version supported */
    uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
-} __attribute__((packed)) ESXBootInfo_Header;
+} __attribute__((packed)) ESXBootInfo_Header_V1;
+
+typedef union ESXBootInfo_Header {
+  uint32_t magic;
+  ESXBootInfo_Header_V1 v1;
+} ESXBootInfo_Header;
 
 /*
  * ESXBootInfo passed from bootloader to kernel.

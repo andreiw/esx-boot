@@ -15,7 +15,7 @@
 #include <cpu.h>
 #include <bootlib.h>
 
-/*-- esxbootinfo_arch_supported_req_flags --------------------------------------
+/*-- esxbootinfo_arch_v1_supported_req_flags -----------------------------------
  *
  *      Extra arch-specific supported required flags.
  *
@@ -25,7 +25,7 @@
  * Results
  *      ESXBOOTINFO_FLAG_ARM64_MODE0.
  *----------------------------------------------------------------------------*/
-int esxbootinfo_arch_supported_req_flags(void)
+int esxbootinfo_arch_v1_supported_req_flags(void)
 {
    return ESXBOOTINFO_FLAG_ARM64_MODE0;
 }
@@ -42,8 +42,14 @@ int esxbootinfo_arch_supported_req_flags(void)
  *----------------------------------------------------------------------------*/
 bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *mbh)
 {
-   ESXBOOTINFO_ARM64_MODE kernel_mode = mbh->flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
-                                                      ESXBOOTINFO_FLAG_ARM64_MODE1);
+   ESXBOOTINFO_ARM64_MODE kernel_mode;
+
+   if (mbh->magic != ESXBOOTINFO_MAGIC_V1) {
+      return false;
+   }
+
+   kernel_mode = mbh->v1.flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
+                                  ESXBOOTINFO_FLAG_ARM64_MODE1);
 
    switch (kernel_mode) {
       case ESXBOOTINFO_ARM64_MODE_EL2:
