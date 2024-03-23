@@ -1,9 +1,14 @@
+#include "kernel.h"
+
 #define ESXBOOTINFO_MAGIC     0x1BADB005
 #define ESXBOOTINFO_ALIGNMENT 8
 #define ESXBOOTINFO_FLAGS     0
 
-   .section .data
-string_entry_ma: .asciz "\nEntry MA = 0x"
+   .section .rodata
+string_link_va:  .asciz "\nLink VA = 0x"
+string_entry_va: .asciz "\nEntry VA = 0x"
+string_a0:       .asciz "\na0 = 0x"
+string_a1:       .asciz "\na1 = 0x"
 string_bye:      .asciz "\nCalling shutdown...\n"
 
    .section .text.entry
@@ -19,6 +24,8 @@ string_bye:      .asciz "\nCalling shutdown...\n"
  */
    .global entry
 entry:
+   mv   t0, a0
+   mv   t1, a1
    j    stack_setup
 
 /*
@@ -48,10 +55,24 @@ stack_setup:
    la   sp, stack_end
 
 show_info:
-   la   a0, string_entry_ma
+   la   a0, string_link_va
    jal  sbi_putstring
+   li   a0, LOAD_ADDRESS
+   jal  sbi_puthex64
 
+   la   a0, string_entry_va
+   jal  sbi_putstring
    la   a0, entry
+   jal  sbi_puthex64
+
+   la   a0, string_a0
+   jal  sbi_putstring
+   mv   a0, t0
+   jal  sbi_puthex64
+
+   la   a0, string_a1
+   jal  sbi_putstring
+   mv   a0, t1
    jal  sbi_puthex64
 
 shutdown:
