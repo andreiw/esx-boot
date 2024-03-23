@@ -56,7 +56,7 @@
 #define ESXBOOTINFO_FLAG_ARM64_MODE1      (1 << 16)  /* bit 1 of ARM Mode */
 #define ESXBOOTINFO_FLAG_EFI_RTS_OLD      (1 << 17)  /* Reserved; do not redefine */
 #define ESXBOOTINFO_FLAG_EFI_RTS          (1 << 18)  /* EFI RTS fields valid */
-#define ESXBOOTINFO_FLAG_LOADESX_VERSION  (1 << 19)  /* LoadESX version field valid */
+#define ESXBOOTINFO_FLAG_OS_PRIVATE       (1 << 19)  /* os_private field valid */
 #define ESXBOOTINFO_FLAG_VIDEO_MIN        (1 << 20)  /* Video min fields valid */
 #define ESXBOOTINFO_FLAG_TPM_MEASUREMENT  (1 << 21)  /* TPM measurement field valid */
 #define ESXBOOTINFO_FLAG_MEMTYPE_SP       (1 << 22)  /* Can use specific purpose memory */
@@ -129,7 +129,9 @@ typedef struct ESXBootInfo_Header_V1 {
    uint32_t depth;           /* Video: preferred bits per pixel (0 for text) */
    uint64_t rts_vaddr;       /* Virtual address of UEFI Runtime Services */
    uint64_t rts_size;        /* For new-style RTS. */
-   uint32_t loadesx_version; /* LoadESX version supported */
+   uint32_t os_private;      /* OS-private field, could be used by a more
+                                OS-coupled loader (ex: loadesx kexec-like
+                                functionality) */
    uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
 } __attribute__((packed)) ESXBootInfo_Header_V1;
 
@@ -166,8 +168,8 @@ typedef enum ESXBootInfo_Type {
    ESXBOOTINFO_MODULE_TYPE,
    ESXBOOTINFO_VBE_TYPE,
    ESXBOOTINFO_EFI_TYPE,
-   ESXBOOTINFO_LOADESX_TYPE,
-   ESXBOOTINFO_LOADESX_CHECKS_TYPE,
+   ESXBOOTINFO_OS_PRIVATE1_TYPE,
+   ESXBOOTINFO_OS_PRIVATE2_TYPE,
    ESXBOOTINFO_TPM_TYPE,
    ESXBOOTINFO_RWD_TYPE,
    ESXBOOTINFO_LOGBUFFER_TYPE,
@@ -254,34 +256,6 @@ typedef struct ESXBootInfo_Efi {
    uint32_t efi_mmap_desc_size; // Size of each descriptor
    uint32_t efi_mmap_version;   // Descriptor version
 } __attribute__((packed)) ESXBootInfo_Efi;
-
-/* LoadESX Flags */
-#define ESXBOOTINFO_LOADESX_USES_MEMXFERFS   (1<<2)  /* LoadESX uses MemXferFS */
-
-typedef struct ESXBootInfo_LoadESX {
-   ESXBootInfo_Type type;
-   uint64_t elmtSize;
-
-   uint64_t flags;
-   /* Currently unused; set to 0. */
-   uint16_t padding;
-   /* Set if flags & ESXBOOTINFO_LOADESX_USES_MEMXFERFS */
-   uint64_t memXferFsStartMPN;
-} __attribute__((packed)) ESXBootInfo_LoadESX;
-
-#define ESXBOOTINFO_LOADESX_CHECK_MAX_LEN 32
-typedef struct ESXBootInfo_LoadESXCheck {
-   char name[ESXBOOTINFO_LOADESX_CHECK_MAX_LEN];
-   uint64_t cookie;
-} ESXBootInfo_LoadESXCheck;
-
-typedef struct ESXBootInfo_LoadESXChecks {
-   ESXBootInfo_Type type;
-   uint64_t elmtSize;
-
-   uint8_t numLoadESXChecks;
-   ESXBootInfo_LoadESXCheck loadESXChecks[0];
-} __attribute__((packed)) ESXBootInfo_LoadESXChecks;
 
 typedef struct ESXBootInfo_LogBuffer {
    ESXBootInfo_Type type;
