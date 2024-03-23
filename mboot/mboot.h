@@ -96,6 +96,8 @@ void TRAMPOLINE do_reloc(reloc_t *reloc);
  */
 int elf_check_headers(void *buffer, size_t buflen, Elf_CommonAddr *base);
 int elf_register(void *buffer, Elf_CommonAddr *entry);
+int elf_arch_supported(void *buffer);
+int elf_arch_alloc_option(void);
 
 /*
  * mboot.c
@@ -166,6 +168,9 @@ typedef struct {
    bool serial;               /* Is the serial log enabled? */
    bool tpm_measure;          /* Should TPM measurements be made? */
    bool runtimewd;            /* Is there a hardware runtime watchdog? */
+   uint32_t kernel_load_align; /* If not 0, use this alignment (in bytes)
+                                  for allocating memory. If 0, use fixed
+                                  (link) address for loading. */
    void *kernel_header;       /* Multiboot/esxbootinfo kernle header. */
    uint32_t boot_magic;       /* Multiboot/esxbootinfo struct magic
                                  reported by bootloader. */

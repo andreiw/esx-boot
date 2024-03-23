@@ -9,7 +9,6 @@
  */
 
 #include <elf.h>
-#include "elf_int.h"
 #include "mboot.h"
 
 /*-- get_image_addr_range ------------------------------------------------------
@@ -246,6 +245,86 @@ static int elf_register_segments(Elf_CommonEhdr *ehdr,
    return ERR_SUCCESS;
 }
 
+/*-- elf_alloc_anywhere --------------------------------------------------------
+ *
+ *      Allocate away the memory ranges that will contain the ELF image
+ *      post relocation.
+ *
+ *      AARCH64/RISCV64 binaries can be loaded anywhere, provided the alignment
+ *      requirements have been met. This means that the ranges allocated may be
+ *      different from the image linked address, with a non-zero reported
+ *      addend.
+ *
+ * Parameters
+ *      IN  link_base:  image base address.
+ *      IN  link_size:  image size.
+ *      IN  align:      allocation alignment.
+ *      OUT run_addend: used to calculate where the ELF binary will
+ *                      be relocated to.
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *----------------------------------------------------------------------------*/
+static int elf_alloc_anywhere(Elf_CommonAddr link_base, Elf64_Size link_size,
+                              size_t align, Elf_CommonAddr *run_addend)
+{
+   int status;
+   Elf_CommonAddr reloc_base;
+
+   status = runtime_alloc(&reloc_base, link_size, align,
+                          elf_arch_alloc_option());
+   if (status != ERR_SUCCESS) {
+      return status;
+   }
+
+   Log(LOG_DEBUG, "Reloc range is [0x%"PRIx64":0x%"PRIx64")\n",
+       reloc_base, reloc_base + link_size);
+   *run_addend = reloc_base - link_base;
+   return ERR_SUCCESS;
+}
+
+/*-- elf_alloc -----------------------------------------------------------------
+ *
+ *      Allocate away the memory ranges that will contain the ELF image
+ *      post relocation.
+ *
+ *      x64 binaries must be loaded at the link address.
+ *
+ *      AArch64 binaries can be loaded anywhere, provided the alignment
+ *      requirements have been met. This means that the ranges allocated
+ *      may be different from the image linked address, with a non-zero
+ *      reported addend.
+ *
+ *      RISC-V behavior depends on an arch-specific flag.
+ *
+ * Parameters
+ *      IN  link_base:  image base address.
+ *      IN  link_size:  image size.
+ *      OUT run_addend: used to calculate where the ELF binary will
+ *                      be relocated to.
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *----------------------------------------------------------------------------*/
+int elf_alloc(Elf_CommonAddr link_base, Elf64_Size link_size,
+              Elf_CommonAddr *run_addend)
+{
+   if (boot.kernel_load_align == 0) {
+      int status;
+
+      status = runtime_alloc_fixed(&link_base, link_size);
+      if (status != ERR_SUCCESS) {
+         return status;
+      }
+
+      *run_addend = 0;
+      return ERR_SUCCESS;
+   } else {
+      return elf_alloc_anywhere(link_base, link_size,
+                                boot.kernel_load_align,
+                                run_addend);
+   }
+}
 
 /*-- elf_register --------------------------------------------------------------
  *
@@ -270,7 +349,7 @@ int elf_register(void *buffer, Elf_CommonAddr *entry)
    Log(LOG_DEBUG, "ELF link address range is [0x%"PRIx64":0x%"PRIx64")\n",
        link_base, link_end);
 
-   status = elf_arch_alloc(link_base, link_end - link_base, &run_addend);
+   status = elf_alloc(link_base, link_end - link_base, &run_addend);
    if (status != ERR_SUCCESS) {
       return status;
    }
@@ -283,43 +362,3 @@ int elf_register(void *buffer, Elf_CommonAddr *entry)
    *entry = Elf_CommonEhdrGetEntry(ehdr) + run_addend;
    return ERR_SUCCESS;
 }
-
-
-#if defined(only_arm64) || defined(only_riscv64)
-/*-- elf_arch_alloc_anywhere ---------------------------------------------------
- *
- *      Allocate away the memory ranges that will contain the ELF image
- *      post relocation.
- *
- *      AARCH64/RISCV64 binaries can be loaded anywhere, provided the alignment
- *      requirements have been met. This means that the ranges allocated may be
- *      different from the image linked address, with a non-zero reported
- *      addend.
- *
- * Parameters
- *      IN  link_base:  image base address.
- *      IN  link_size:  image size.
- *      IN  align:      allocation alignment.
- *      OUT run_addend: used to calculate where the ELF binary will
- *                      be relocated to.
- *
- * Results
- *      ERR_SUCCESS, or a generic error status.
- *----------------------------------------------------------------------------*/
-int elf_arch_alloc_anywhere(Elf_CommonAddr link_base, Elf64_Size link_size,
-                            size_t align, Elf_CommonAddr *run_addend)
-{
-   int status;
-   Elf_CommonAddr reloc_base;
-
-   status = runtime_alloc(&reloc_base, link_size, align, ALLOC_ANY);
-   if (status != ERR_SUCCESS) {
-      return status;
-   }
-
-   Log(LOG_DEBUG, "Reloc range is [0x%"PRIx64":0x%"PRIx64")\n",
-       reloc_base, reloc_base + link_size);
-   *run_addend = reloc_base - link_base;
-   return ERR_SUCCESS;
-}
-#endif /* defined(only_arm64) || defined(only_riscv64) */

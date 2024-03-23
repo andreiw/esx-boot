@@ -15,6 +15,12 @@
 #include <stdbool.h>
 #include <cpu.h>
 #include <bootlib.h>
+#include "mboot.h"
+
+/*
+ * When loading an ELF "anywhere", use a 2MB alignment.
+ */
+#define ELF_EXEC_ALLOC_ALIGNMENT 0x200000
 
 /*-- esxbootinfo_arch_v1_supported_req_flags -----------------------------------
  *
@@ -26,7 +32,7 @@
  * Results
  *      ESXBOOTINFO_FLAG_ARM64_MODE0.
  *----------------------------------------------------------------------------*/
-int esxbootinfo_arch_v1_supported_req_flags(void)
+uint32_t esxbootinfo_arch_v1_supported_req_flags(void)
 {
    return ESXBOOTINFO_FLAG_ARM64_MODE0;
 }
@@ -46,6 +52,7 @@ bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *mbh)
    ESXBOOTINFO_ARM64_MODE kernel_mode = 0;
 
    if (mbh->magic == ESXBOOTINFO_MAGIC_V1) {
+      boot.kernel_load_align = ELF_EXEC_ALLOC_ALIGNMENT;
       kernel_mode = mbh->v1.flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
                                      ESXBOOTINFO_FLAG_ARM64_MODE1);
    } else {

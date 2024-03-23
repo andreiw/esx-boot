@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2017 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -8,7 +9,6 @@
  */
 
 #include <elf.h>
-#include "elf_int.h"
 #include "mboot.h"
 
 /*-- elf_arch_supported --------------------------------------------------------
@@ -43,32 +43,18 @@ int elf_arch_supported(void *buffer)
    return ERR_SUCCESS;
 }
 
-/*-- elf_arch_alloc ------------------------------------------------------------
+/*-- elf_arch_alloc_option -----------------------------------------------------
  *
- *      Allocate away the memory ranges that will contain the ELF image
- *      post relocation.
- *
- *      x86 binaries must be loaded at the linked address, thus reported
- *      addend is always zero.
- *
- * Parameters
- *      IN  link_base:  image base address.
- *      IN  link_size:  image size.
- *      OUT run_addend: 0.
+ *      Option to use in runtime_alloc by elf_alloc_anywhere.
  *
  * Results
- *      ERR_SUCCESS, or a generic error status.
+ *      ALLOC_ANY or ALLOC_32BIT.
  *----------------------------------------------------------------------------*/
-int elf_arch_alloc(Elf_CommonAddr link_base, Elf64_Size link_size,
-                   Elf_CommonAddr *run_addend)
+int elf_arch_alloc_option(void)
 {
-   int status;
-
-   status = runtime_alloc_fixed(&link_base, link_size);
-   if (status != ERR_SUCCESS) {
-      return status;
-   }
-
-   *run_addend = 0;
-   return ERR_SUCCESS;
+   /*
+    * Hand-off always transitions to 32-bit mode, so if the kernel is
+    * being loaded anywhere, it needs to stay below 4GiB.
+    */
+   return ALLOC_32BIT;
 }

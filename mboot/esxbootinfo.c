@@ -308,6 +308,17 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
          boot.tpm_measure = (tpm->tpm_measure & ESXBOOTINFO_TPM_MEASURE_V1) != 0;
          break;
       }
+      case ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE: {
+         ESXBootInfo_FeatLoadAlign *load_align = (void *) feat;
+
+         if (feat->feat_size > sizeof (ESXBootInfo_FeatLoadAlign)) {
+            Log(LOG_ERR, "Unsupported FEAT_LOAD_ALIGN size");
+            return ERR_BAD_TYPE;
+         }
+
+         boot.kernel_load_align = load_align->load_align;
+         break;
+      }
       default:
          break;
       }

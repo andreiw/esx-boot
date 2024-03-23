@@ -143,6 +143,7 @@ typedef enum ESXBootInfo_FeatType {
    ESXBOOTINFO_FEAT_UEFI_TYPE,
    ESXBOOTINFO_FEAT_OS_PRIVATE_TYPE,
    ESXBOOTINFO_FEAT_TPM_TYPE,
+   ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE,
    NUM_ESXBOOTINFO_FEAT_TYPE
 } ESXBootInfo_FeatType;
 
@@ -206,6 +207,13 @@ typedef struct ESXBootInfo_FeatTpm {
    uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
 } __attribute__((packed)) ESXBootInfo_FeatTpm;
 
+typedef struct ESXBootInfo_FeatLoadAlign {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+   uint32_t load_align;
+} __attribute__((packed)) ESXBootInfo_FeatLoadAlign;
+
 /*
  * ESXBootInfo_Header_V2 passed statically from kernel to bootloader.
  */
@@ -248,28 +256,6 @@ typedef union ESXBootInfo_Header {
   ESXBootInfo_Header_V2 v2;
 } ESXBootInfo_Header;
 
-/*
- * ESXBootInfo passed from bootloader to kernel.
- *
- * x86/x64:
- *  EAX - ESXBootInfo magic.
- *  EBX - PA of ESXBootInfo data structure.
- *
- * ARM64:
- *  x0 - ESXBootInfo magic.
- *  x1 - PA of ESXBootInfo data structure.
- *
- * The ESXBootInfo data structure is used by the the boot loader to communicate
- * vital information to the operating system.  The operating system can use or
- * ignore any parts of the structure as it chooses; all information passed by
- * the boot loader is advisory only.
- *
- * The ESXBootInfo structure and its related substructures may be placed
- * anywhere in memory by the boot loader (with the exception of the memory
- * reserved for the kernel and boot modules, of course). It is the operating
- * system's responsibility to avoid overwriting this memory until it is done
- * using it.
- */
 typedef enum ESXBootInfo_Type {
    ESXBOOTINFO_INVALID_TYPE,
    ESXBOOTINFO_MEMRANGE_TYPE,
@@ -386,6 +372,55 @@ typedef struct ESXBootInfo_Tpm {
    uint32_t eventLogSize;
    uint8_t eventLog[0];
 } __attribute__((packed)) ESXBootInfo_Tpm;
+
+/*
+ * ESXBootInfo passed from bootloader to kernel.
+ *
+ * x86/x64:
+ *  EAX: ESXBootInfo magic.
+ *  EBX: PA of ESXBootInfo data structure.
+ *  State: 32-bit unpaged mode. See mboot/x86/trampoline.s
+ *         for details.
+ *
+ * ARM64:
+ *  x0: ESXBootInfo magic.
+ *  x1: PA of ESXBootInfo data structure.
+ *  State: MMU and caches may be on.
+ *
+ * RISCV64:
+ *  a0: ESXBootInfo magic.
+ *  a1: PA of ESXBootInfo data structure.
+ *  State: MMU and caches may be on.
+ *
+ * The magic value reported matches the magic of the ESXBootInfo
+ * header reported by the kernel.
+ *
+ * Some state at kernel entry depends on choice of reported
+ * ESXBootInfo header.
+ *
+ * Version ESXBOOTINFO_MAGIC_V1:
+ *  x86/x64: loaded at linked address.
+ *  ARM64/RISCV64: loaded at any 2MB-aligned address.
+ *
+ * Version ESXBOOTINFO_MAGIC_V2:
+ *  FEAT_LOAD_ALIGN missing: loaded at linked address.
+ *  FEAT_LOAD_ALIGN load_align == 0: loaded at linked address.
+ *  FEAT_LOAD_ALIGN load_align != 0: loaded at load_align-aligned
+ *                                   address. On x86/x64, this
+ *                                   address is below 4GiB.
+ *
+ * The ESXBootInfo data structure is used by the the boot loader
+ * to communicate vital information to the operating system.
+ * The operating system can use or ignore any parts of the structure
+ * as it chooses; all information passed by the boot loader is
+ * advisory only.
+ *
+ * The ESXBootInfo structure and its related substructures may be
+ * placed anywhere in memory by the boot loader (with the exception
+ * of the memory reserved for the kernel and boot modules, of course).
+ * It is the operating system's responsibility to avoid overwriting
+ * this memory until it is done using it.
+ */
 
 typedef struct ESXBootInfo {
    uint64_t cmdline;

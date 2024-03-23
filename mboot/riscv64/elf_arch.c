@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -8,10 +9,7 @@
  */
 
 #include <elf.h>
-#include "elf_int.h"
 #include "mboot.h"
-
-#define ELF_EXEC_ALIGNMENT 0x200000
 
 /*-- elf_arch_supported --------------------------------------------------------
  *
@@ -44,28 +42,14 @@ int elf_arch_supported(void *buffer)
    return ERR_SUCCESS;
 }
 
-/*-- elf_arch_alloc ------------------------------------------------------------
+/*-- elf_arch_alloc_option -----------------------------------------------------
  *
- *      Allocate away the memory ranges that will contain the ELF image
- *      post relocation.
- *
- *      RISCV64 binaries can be loaded anywhere, provided the alignment
- *      requirements have been met. This means that the ranges allocated
- *      may be different from the image linked address, with a non-zero
- *      reported addend.
- *
- * Parameters
- *      IN  link_base:  image base address.
- *      IN  link_size:  image size.
- *      OUT run_addend: used to calculate where the ELF binary will
- *                      be relocated to.
+ *      Option to use in runtime_alloc by elf_alloc_anywhere.
  *
  * Results
- *      ERR_SUCCESS, or a generic error status.
+ *      ALLOC_ANY or ALLOC_32BIT.
  *----------------------------------------------------------------------------*/
-int elf_arch_alloc(Elf_CommonAddr link_base, Elf64_Size link_size,
-                   Elf_CommonAddr *run_addend)
+int elf_arch_alloc_option(void)
 {
-   return elf_arch_alloc_anywhere(link_base, link_size, ELF_EXEC_ALIGNMENT,
-                                  run_addend);
+   return ALLOC_ANY;
 }

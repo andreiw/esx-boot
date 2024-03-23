@@ -13,6 +13,12 @@
 #include <sys/types.h>
 #include <esxbootinfo.h>
 #include <stdbool.h>
+#include "mboot.h"
+
+/*
+ * When loading an ELF "anywhere", use a 2MB alignment.
+ */
+#define ELF_EXEC_ALLOC_ALIGNMENT 0x200000
 
 /*-- esxbootinfo_arch_v1_supported_req_flags -----------------------------------
  *
@@ -24,7 +30,7 @@
  * Results
  *      0.
  *----------------------------------------------------------------------------*/
-int esxbootinfo_arch_v1_supported_req_flags(void)
+uint32_t esxbootinfo_arch_v1_supported_req_flags(void)
 {
    return 0;
 }
@@ -41,5 +47,9 @@ int esxbootinfo_arch_v1_supported_req_flags(void)
  *----------------------------------------------------------------------------*/
 bool esxbootinfo_arch_check_kernel(UNUSED_PARAM(ESXBootInfo_Header *mbh))
 {
+   if (mbh->magic == ESXBOOTINFO_MAGIC_V1) {
+      boot.kernel_load_align = ELF_EXEC_ALLOC_ALIGNMENT;
+   }
+
    return true;
 }

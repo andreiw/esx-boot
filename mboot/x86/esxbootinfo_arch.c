@@ -25,7 +25,7 @@
  * Results
  *      0.
  *----------------------------------------------------------------------------*/
-int esxbootinfo_arch_v1_supported_req_flags(void)
+uint32_t esxbootinfo_arch_v1_supported_req_flags(void)
 {
    return 0;
 }
