@@ -166,6 +166,7 @@ typedef struct {
    bool serial;               /* Is the serial log enabled? */
    bool tpm_measure;          /* Should TPM measurements be made? */
    bool runtimewd;            /* Is there a hardware runtime watchdog? */
+   void *kernel_header;       /* Multiboot/esxbootinfo kernle header. */
    uint32_t boot_magic;       /* Multiboot/esxbootinfo struct magic
                                  reported by bootloader. */
    uint32_t timeout;          /* Autoboot timeout in units of seconds */

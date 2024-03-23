@@ -282,6 +282,7 @@ int check_esxbootinfo_kernel(void *kbuf, size_t ksize)
       return ERR_BAD_TYPE;
    }
 
+   boot.kernel_header = mbh;
    boot.boot_magic = mbh->magic;
    boot.efi_info.rts_size = 0;
    boot.efi_info.rts_vaddr = 0;
@@ -894,14 +895,10 @@ int esxbootinfo_register(void)
  *      information when the kernel ESXBootInfo headers specify a VBE mode to be
  *      setup.
  *
- * Parameters
- *      IN kbuf:  pointer to the kernel buffer
- *      IN ksize: kernel buffer size, in bytes
- *
  * Results
- *      ERR_SUCCESS, or a generic error status.
+ *      None.
  *----------------------------------------------------------------------------*/
-static int esxbootinfo_init_vbe(void *kbuf, size_t ksize)
+static void esxbootinfo_init_vbe(void)
 {
    ESXBootInfo_Header *mbh;
    int status;
@@ -914,14 +911,13 @@ static int esxbootinfo_init_vbe(void *kbuf, size_t ksize)
    status = video_check_support();
    if (status != ERR_SUCCESS) {
       Log(LOG_WARNING, "Error checking video support: %s", error_str[status]);
-      return status;
+      return;
    }
 
-   mbh = esxbootinfo_scan(kbuf, ksize);
+   mbh = boot.kernel_header;
 
    text_mode = true;
-   if (mbh != NULL &&
-       ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) &&
+   if (((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) &&
        (mbh->mode_type == ESXBOOTINFO_VIDEO_GRAPHIC)) {
       unsigned int min_width, min_height, min_depth;
       if ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO_MIN) ==
@@ -953,18 +949,12 @@ static int esxbootinfo_init_vbe(void *kbuf, size_t ksize)
       }
    }
 
-   if (mbh != NULL &&
-       ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO)) {
-      int get_info_status = video_get_vbe_info(&vbe);
-      if (get_info_status != ERR_SUCCESS) {
+   if ((mbh->flags & ESXBOOTINFO_FLAG_VIDEO) == ESXBOOTINFO_FLAG_VIDEO) {
+      status = video_get_vbe_info(&vbe);
+      if (status != ERR_SUCCESS) {
          Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
-         if (status == ERR_SUCCESS) {
-            status = get_info_status;
-         }
       }
    }
-
-   return status;
 }
 
 /*-- esxbootinfo_init ----------------------------------------------------------
@@ -1059,8 +1049,7 @@ int esxbootinfo_init(void)
    }
 
    if (!boot.headless) {
-      // Ignore errors; they have been logged already
-      (void) esxbootinfo_init_vbe(boot.modules[0].addr, boot.modules[0].size);
+      esxbootinfo_init_vbe();
    }
 
    if (tpm_event_log.size != 0) {

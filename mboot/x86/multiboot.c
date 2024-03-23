@@ -206,6 +206,7 @@ int check_multiboot_kernel(void *kbuf, size_t ksize)
       return ERR_BAD_TYPE;
    }
 
+   boot.kernel_header = mbh;
    boot.boot_magic = MBI_MAGIC;
    boot.efi_info.rts_size = 0;
    boot.efi_info.rts_vaddr = 0;
@@ -713,14 +714,10 @@ int multiboot_register(void)
  *      information when the kernel Multiboot headers specify a VBE mode to be
  *      setup.
  *
- * Parameters
- *      IN kbuf:  pointer to the kernel buffer
- *      IN ksize: kernel buffer size, in bytes
- *
  * Results
- *      ERR_SUCCESS, or a generic error status.
+ *      None.
  *----------------------------------------------------------------------------*/
-static int multiboot_init_vbe(void *kbuf, size_t ksize)
+static void multiboot_init_vbe(void)
 {
    MultiBoot_Header *mbh;
    int status;
@@ -733,14 +730,13 @@ static int multiboot_init_vbe(void *kbuf, size_t ksize)
    status = video_check_support();
    if (status != ERR_SUCCESS) {
       Log(LOG_WARNING, "Error checking video support: %s", error_str[status]);
-      return status;
+      return;
    }
 
-   mbh = mbh_scan(kbuf, ksize);
+   mbh = boot.kernel_header;
 
    text_mode = true;
-   if (mbh != NULL &&
-       ((mbh->flags & MBH_FLAG_VIDEO) == MBH_FLAG_VIDEO) &&
+   if (((mbh->flags & MBH_FLAG_VIDEO) == MBH_FLAG_VIDEO) &&
        (mbh->mode_type == MBH_VIDEO_GRAPHIC)) {
       status = gui_resize(mbh->width, mbh->height, mbh->depth,
                           mbh->width, mbh->height, mbh->depth);
@@ -761,17 +757,12 @@ static int multiboot_init_vbe(void *kbuf, size_t ksize)
       }
    }
 
-   if (mbh != NULL && ((mbh->flags & MBH_FLAG_VIDEO) == MBH_FLAG_VIDEO)) {
-      int get_info_status = video_get_vbe_info(&vbe);
-      if (get_info_status != ERR_SUCCESS) {
+   if ((mbh->flags & MBH_FLAG_VIDEO) == MBH_FLAG_VIDEO) {
+      status = video_get_vbe_info(&vbe);
+      if (status != ERR_SUCCESS) {
          Log(LOG_WARNING, "Error getting video info: %s", error_str[status]);
-         if (status == ERR_SUCCESS) {
-            status = get_info_status;
-         }
       }
    }
-
-   return status;
 }
 
 /*-- multiboot_init ------------------------------------------------------------
@@ -822,8 +813,7 @@ int multiboot_init(void)
    memset(&mb_info, 0, sizeof (MultiBoot_Info));
 
    if (!boot.headless) {
-      // Ignore errors; they have been logged already
-      (void) multiboot_init_vbe(boot.modules[0].addr, boot.modules[0].size);
+      multiboot_init_vbe();
    }
 
    return ERR_SUCCESS;
