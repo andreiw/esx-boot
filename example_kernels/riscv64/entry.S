@@ -48,7 +48,7 @@ entry:
    .long   0 /* depth */
    .long   0 /* rts_vaddr */
    .long   0 /* rts_size */
-   .long   0 /* loadesx_version */
+   .long   0 /* os_private */
    .long   0 /* tpm_measure */
 
 stack_setup:
