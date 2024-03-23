@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2011,2014-2015,2018,2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -47,12 +48,17 @@ void get_image_addr_range(void *buffer, Elf_CommonAddr *image_base,
    for (i = 0; i <  Elf_CommonEhdrGetPhNum(ehdr); i++) {
       ph = Elf_CommonEhdrGetPhdr(ehdr, phdr, i);
 
-      if (Elf_CommonPhdrGetType(ehdr, ph) != PT_LOAD) {
+      run_size = Elf_CommonPhdrGetMemsz(ehdr, ph);
+      if (Elf_CommonPhdrGetType(ehdr, ph) != PT_LOAD ||
+         run_size == 0) {
          continue;
       }
 
       run_addr = Elf_CommonPhdrGetPaddr(ehdr, ph);
-      run_size = Elf_CommonPhdrGetMemsz(ehdr, ph);
+
+      if (run_size == 0) {
+         continue;
+      }
 
       if (b > run_addr) {
          b = run_addr;
@@ -202,14 +208,15 @@ static int elf_register_segments(Elf_CommonEhdr *ehdr,
    for (i = 0; i < Elf_CommonEhdrGetPhNum(ehdr); i++) {
       ph = Elf_CommonEhdrGetPhdr(ehdr, phdr, i);
 
-      if (Elf_CommonPhdrGetType(ehdr, ph) != PT_LOAD) {
+      run_size = Elf_CommonPhdrGetMemsz(ehdr, ph);
+      if (Elf_CommonPhdrGetType(ehdr, ph) != PT_LOAD ||
+         run_size == 0) {
          continue;
       }
 
       load_addr = (char *) ehdr + Elf_CommonPhdrGetOffset(ehdr, ph);
       load_size = Elf_CommonPhdrGetFilesz(ehdr, ph);
       run_addr = Elf_CommonPhdrGetPaddr(ehdr, ph) + run_addend;
-      run_size = Elf_CommonPhdrGetMemsz(ehdr, ph);
       bss_size = run_size - load_size;
 
       if (boot.debug) {
