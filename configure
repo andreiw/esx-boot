@@ -77,7 +77,7 @@ export CRYPTO_MODULE := 1
 
 include env/common.mk
 
-SUBDIRS := com32 uefi64 uefiarm64 uefiriscv64
+SUBDIRS := com32 uefi32 uefi64 uefiarm64 uefiriscv64
 
 TOPDIR := $(CURDIR)
 export TOPDIR
