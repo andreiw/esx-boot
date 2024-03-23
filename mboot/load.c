@@ -453,22 +453,19 @@ static int load_module(unsigned int n)
    if (n == 0) {
       /*
        * On x86, kernel can be Multiboot or ESXBootInfo.
-       * On AArch64, kernel can only be ESXBootInfo.
+       * On AArch64 and RISC-V, kernel can only be ESXBootInfo.
        */
       status = check_esxbootinfo_kernel(addr, size);
       if (status != ERR_SUCCESS) {
          status = check_multiboot_kernel(addr, size);
-         if (status != ERR_SUCCESS) {
-            sys_free(addr);
-            Log(LOG_ERR, "Error %d (%s) while loading kernel: %s. "
-                         "kernel is either invalid or corrupted.\n",
-                status, error_str[status], filepath);
-            return status;
-         } else {
-            boot.is_esxbootinfo = false;
-         }
-      } else {
-         boot.is_esxbootinfo = true;
+      }
+
+      if (status != ERR_SUCCESS) {
+         sys_free(addr);
+         Log(LOG_ERR, "Error %d (%s) while loading kernel: %s. "
+             "kernel is either invalid or corrupted.\n",
+             status, error_str[status], filepath);
+         return status;
       }
    }
 

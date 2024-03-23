@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2011,2015-2016 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -205,6 +206,7 @@ int check_multiboot_kernel(void *kbuf, size_t ksize)
       return ERR_BAD_TYPE;
    }
 
+   boot.boot_magic = MBI_MAGIC;
    boot.efi_info.rts_size = 0;
    boot.efi_info.rts_vaddr = 0;
    boot.efi_info.caps |= EFI_RTS_CAP_RTS_SIMPLE;

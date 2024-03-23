@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2023 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -653,7 +654,7 @@ int main(int argc, char **argv)
    }
 
    Log(LOG_DEBUG, "Initializing %s standard...",
-       boot.is_esxbootinfo ? "ESXBootInfo" : "Multiboot");
+       boot_is_esxbootinfo() ? "ESXBootInfo" : "Multiboot");
 
    status = boot_init();
    if (status != ERR_SUCCESS) {
@@ -692,7 +693,7 @@ int main(int argc, char **argv)
    Log(LOG_INFO, "Relocating modules and starting up the kernel...");
    handoff->ebi = ebi;
    handoff->kernel = boot.kernel.entry;
-   handoff->ebi_magic = boot.is_esxbootinfo ? ESXBOOTINFO_MAGIC : MBI_MAGIC;
+   handoff->ebi_magic = boot.boot_magic;
    jump_to_trampoline(handoff);
 
    NOT_REACHED();

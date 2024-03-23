@@ -161,12 +161,13 @@ typedef struct {
    bool bootif;               /* Force BOOTIF= on the kernel command line */
    bool no_mem_attr;          /* Do not pass extended attr in Multiboot mmap */
    bool is_network_boot;      /* Is the boot process via network? */
-   bool is_esxbootinfo;       /* Is the kernel an ESXBootInfo kernel? */
    bool no_quirks;            /* Do not work around platform quirks */
    bool no_rts;               /* Disable UEFI runtime services support */
    bool serial;               /* Is the serial log enabled? */
    bool tpm_measure;          /* Should TPM measurements be made? */
    bool runtimewd;            /* Is there a hardware runtime watchdog? */
+   uint32_t boot_magic;       /* Multiboot/esxbootinfo struct magic
+                                 reported by bootloader. */
    uint32_t timeout;          /* Autoboot timeout in units of seconds */
    uint32_t runtimewd_timeout;/* Hardware runtime watchdog timeout, seconds */
    int32_t err_timeout;       /* Exit on errors after timeout (-1 = hang) */
@@ -260,9 +261,18 @@ bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *ebh);
  * code.
  */
 
+static INLINE bool boot_is_esxbootinfo(void)
+{
+   if (boot.boot_magic == ESXBOOTINFO_MAGIC) {
+      return true;
+   }
+
+   return false;
+}
+
 static INLINE size_t boot_mmap_desc_size(void)
 {
-   if (boot.is_esxbootinfo) {
+   if (boot_is_esxbootinfo()) {
       return 0;
    } else {
       return mb_mmap_desc_size();
@@ -271,7 +281,7 @@ static INLINE size_t boot_mmap_desc_size(void)
 
 static INLINE int boot_set_runtime_pointers(run_addr_t *run_ebi)
 {
-   if (boot.is_esxbootinfo) {
+   if (boot_is_esxbootinfo()) {
       return esxbootinfo_set_runtime_pointers(run_ebi);
    } else {
       return multiboot_set_runtime_pointers(run_ebi);
@@ -280,7 +290,7 @@ static INLINE int boot_set_runtime_pointers(run_addr_t *run_ebi)
 
 static INLINE int boot_init(void)
 {
-   if (boot.is_esxbootinfo) {
+   if (boot_is_esxbootinfo()) {
       return esxbootinfo_init();
    } else {
       return multiboot_init();
@@ -289,7 +299,7 @@ static INLINE int boot_init(void)
 
 static INLINE int boot_register(void)
 {
-   if (boot.is_esxbootinfo) {
+   if (boot_is_esxbootinfo()) {
       return esxbootinfo_register();
    } else {
       return multiboot_register();
