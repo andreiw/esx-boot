@@ -144,6 +144,7 @@ typedef enum ESXBootInfo_FeatType {
    ESXBOOTINFO_FEAT_OS_PRIVATE_TYPE,
    ESXBOOTINFO_FEAT_TPM_TYPE,
    ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE,
+   ESXBOOTINFO_FEAT_SERIAL_CON_TYPE,
    NUM_ESXBOOTINFO_FEAT_TYPE
 } ESXBootInfo_FeatType;
 
@@ -214,6 +215,12 @@ typedef struct ESXBootInfo_FeatLoadAlign {
    uint32_t load_align;
 } __attribute__((packed)) ESXBootInfo_FeatLoadAlign;
 
+typedef struct ESXBootInfo_FeatSerialCon {
+   ESXBootInfo_FeatType feat_type;
+   uint32_t feat_flags;
+   uint32_t feat_size;
+} __attribute__((packed)) ESXBootInfo_FeatSerialCon;
+
 /*
  * ESXBootInfo_Header_V2 passed statically from kernel to bootloader.
  */
@@ -267,6 +274,7 @@ typedef enum ESXBootInfo_Type {
    ESXBOOTINFO_TPM_TYPE,
    ESXBOOTINFO_RWD_TYPE,
    ESXBOOTINFO_LOGBUFFER_TYPE,
+   ESXBOOTINFO_SERIAL_CON_TYPE,
    NUM_ESXBOOTINFO_TYPE
 } ESXBootInfo_Type;
 
@@ -372,6 +380,48 @@ typedef struct ESXBootInfo_Tpm {
    uint32_t eventLogSize;
    uint8_t eventLog[0];
 } __attribute__((packed)) ESXBootInfo_Tpm;
+
+typedef enum ESXBootInfo_SerialConType {
+   ESXBOOTINFO_SERIAL_CON_TYPE_NS16550,
+   ESXBOOTINFO_SERIAL_CON_TYPE_PL011,
+   ESXBOOTINFO_SERIAL_CON_TYPE_TMFIFO,
+   ESXBOOTINFO_SERIAL_CON_TYPE_AAPL_S5L,
+   ESXBOOTINFO_SERIAL_CON_TYPE_SBI,
+} ESXBootInfo_SerialConType;
+
+typedef enum ESXBootInfo_SerialConSpace {
+   ESXBOOTINFO_SERIAL_CON_SPACE_IO_PORT,
+   ESXBOOTINFO_SERIAL_CON_SPACE_MMIO,
+} ESXBootInfo_SerialConSpace;
+
+typedef enum ESXBootInfo_SerialConAccess {
+   /*
+    * These match ACPI Generic Address Structure (GAS) Access Size.
+    */
+   ESXBOOTINFO_SERIAL_CON_ACCESS_LEGACY = 0,
+   ESXBOOTINFO_SERIAL_CON_ACCESS_8,
+   ESXBOOTINFO_SERIAL_CON_ACCESS_16,
+   ESXBOOTINFO_SERIAL_CON_ACCESS_32,
+   ESXBOOTINFO_SERIAL_CON_ACCESS_64,
+} ESXBootInfo_SerialConAccess;
+
+typedef struct ESXBootInfo_SerialCon {
+   ESXBootInfo_Type type;
+   uint64_t elmtSize;
+   ESXBootInfo_SerialConType  con_type;
+   ESXBootInfo_SerialConSpace space;
+   uint64_t base;
+   /*
+    * 'access' and 'offset_scaling' are only applicable
+    * for port I/O and MMIO accesses.
+    */
+   uint8_t offset_scaling;
+   ESXBootInfo_SerialConAccess access;
+   /*
+    * 'baud' is only applicable to actual U(S)ARTS.
+    */
+   uint32_t baud;
+} __attribute__((packed)) ESXBootInfo_SerialCon;
 
 /*
  * ESXBootInfo passed from bootloader to kernel.

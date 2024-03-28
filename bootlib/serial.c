@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2012,2014-2015,2020 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -13,6 +14,26 @@
 #include <uart.h>
 
 static uart_t serial_dev;
+static bool   serial_valid;
+
+/*-- serial_get_uart -----------------------------------------------------------
+ *
+ *      Return a uart_t *, if it is valid.
+ *
+ * Parameters
+ *      None.
+ *
+ * Results
+ *      uart_t * or NULL.
+ *----------------------------------------------------------------------------*/
+uart_t *serial_get_uart(void)
+{
+   if (!serial_valid) {
+      return NULL;
+   }
+
+   return &serial_dev;
+}
 
 /*-- serial_log ----------------------------------------------------------------
  *
@@ -65,9 +86,9 @@ static int serial_log(const char *msg)
    return len;
 }
 
-/*-- serial_log_init -----------------------------------------------------------
+/*-- serial_hw_init ------------------------------------------------------------
  *
- *      Initialize the serial console.
+ *      Initialize the serial console hardware.
  *
  * Parameters
  *      IN com:      serial port COM number (1=COM1, 2=COM2, 3=COM3, 4=COM4),
@@ -77,7 +98,7 @@ static int serial_log(const char *msg)
  * Results
  *      ERR_SUCCESS, or a generic error status.
  *----------------------------------------------------------------------------*/
-int serial_log_init(int com, uint32_t baudrate)
+int serial_hw_init(int com, uint32_t baudrate)
 {
    int status;
    uint32_t original_baudrate;
@@ -109,6 +130,34 @@ int serial_log_init(int com, uint32_t baudrate)
    status = uart_init(&serial_dev);
    if (status != ERR_SUCCESS) {
       return status;
+   }
+
+   serial_valid = true;
+
+   return ERR_SUCCESS;
+}
+
+/*-- serial_log_init -----------------------------------------------------------
+ *
+ *      Initialize the serial hw and register logging via serial port.
+ *
+ * Parameters
+ *      IN com:      serial port COM number (1=COM1, 2=COM2, 3=COM3, 4=COM4),
+ *                   other values: the serial port I/O base address
+ *      IN baudrate: serial port speed, in bits per second
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *----------------------------------------------------------------------------*/
+int serial_log_init(int com, uint32_t baudrate)
+{
+   int status;
+
+   if (!serial_valid) {
+      status = serial_hw_init(com, baudrate);
+      if (status != ERR_SUCCESS) {
+         return status;
+      }
    }
 
    status = log_subscribe(serial_log, LOG_DEBUG);

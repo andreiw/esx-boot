@@ -17,6 +17,7 @@
 #include <boot_services.h>
 #include <cpu.h>
 #include <bapply.h>
+#include <uart.h>
 
 #include "mboot.h"
 
@@ -317,6 +318,30 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
          }
 
          boot.kernel_load_align = load_align->load_align;
+         break;
+      }
+      case ESXBOOTINFO_FEAT_SERIAL_CON_TYPE: {
+         uart_t *uart;
+
+         if (feat->feat_size > sizeof (ESXBootInfo_FeatSerialCon)) {
+            Log(LOG_ERR, "Unsupported ESXBOOTINFO_FEAT_SERIAL_CON_TYPE size");
+            return ERR_BAD_TYPE;
+         }
+
+         uart = serial_get_uart();
+         if (uart == NULL) {
+            if (serial_hw_init (DEFAULT_SERIAL_COM, DEFAULT_SERIAL_BAUDRATE) ==
+                ERR_SUCCESS) {
+               uart = serial_get_uart();
+            }
+         }
+
+         if (uart != NULL) {
+            boot.report_serial = true;
+         } else if ((feat->feat_flags & ESXBOOTINFO_FEAT_REQUIRED) != 0) {
+            Log(LOG_ERR, "ESXBootInfo requires a serial console, but none exists");
+            return ERR_UNSUPPORTED;
+         }
          break;
       }
       default:
@@ -666,6 +691,87 @@ static int e820_to_esxbootinfo(e820_range_t *e820, size_t *count)
    return ERR_SUCCESS;
 }
 
+/*-- esxbootinfo_set_serial_con ------------------------------------------------
+ *
+ *      Set serial console fields in the EBI.
+ *
+ * Parameters
+ *      None.
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *
+ *----------------------------------------------------------------------------*/
+static int esxbootinfo_set_serial_con(void)
+{
+   ESXBootInfo_SerialCon *con = (void *)next_elmt;
+   uart_t *uart;
+   int status;
+
+   uart = serial_get_uart();
+   if (uart == NULL) {
+      return ERR_SUCCESS;
+   }
+
+   status = eb_check_space(sizeof(ESXBootInfo_SerialCon));
+   if (status != ERR_SUCCESS) {
+      return status;
+   }
+
+   con->type = ESXBOOTINFO_SERIAL_CON_TYPE;
+   con->elmtSize = sizeof(ESXBootInfo_SerialCon);
+
+   switch (uart->type) {
+   case SERIAL_NS16550:
+      con->con_type = ESXBOOTINFO_SERIAL_CON_TYPE_NS16550;
+      break;
+   case SERIAL_PL011:
+      con->con_type = ESXBOOTINFO_SERIAL_CON_TYPE_PL011;
+      break;
+   case SERIAL_TMFIFO:
+      con->con_type = ESXBOOTINFO_SERIAL_CON_TYPE_TMFIFO;
+      break;
+   case SERIAL_AAPL_S5L:
+      con->con_type = ESXBOOTINFO_SERIAL_CON_TYPE_AAPL_S5L;
+      break;
+   case SERIAL_SBI:
+      con->con_type = ESXBOOTINFO_SERIAL_CON_TYPE_SBI;
+      break;
+   case SERIAL_COUNT:
+      NOT_REACHED();
+   }
+
+   if (uart->io.type == IO_PORT_MAPPED) {
+      con->space = ESXBOOTINFO_SERIAL_CON_SPACE_IO_PORT;
+      con->base = uart->io.channel.port;
+   } else {
+      con->space = ESXBOOTINFO_SERIAL_CON_SPACE_MMIO;
+      con->base = uart->io.channel.addr;
+   }
+
+   switch (uart->io.access) {
+   case IO_ACCESS_LEGACY:
+      con->access = ESXBOOTINFO_SERIAL_CON_ACCESS_LEGACY;
+      break;
+   case IO_ACCESS_8:
+      con->access = ESXBOOTINFO_SERIAL_CON_ACCESS_8;
+      break;
+   case IO_ACCESS_16:
+      con->access = ESXBOOTINFO_SERIAL_CON_ACCESS_16;
+      break;
+   case IO_ACCESS_32:
+      con->access = ESXBOOTINFO_SERIAL_CON_ACCESS_32;
+      break;
+   case IO_ACCESS_64:
+      con->access = ESXBOOTINFO_SERIAL_CON_ACCESS_64;
+      break;
+   }
+   con->offset_scaling = uart->io.offset_scaling;
+   con->baud = uart->baudrate;
+
+   eb_advance_next_elmt();
+   return ERR_SUCCESS;
+}
 
 /*-- esxbootinfo_set_runtimewd -------------------------------------------------
  *
@@ -822,6 +928,13 @@ int esxbootinfo_set_runtime_pointers(run_addr_t *run_ebi)
 
    // set log buffer info.
    esxbootinfo_set_logbuffer();
+
+   if (boot.report_serial) {
+      status = esxbootinfo_set_serial_con();
+      if (status != ERR_SUCCESS) {
+         return status;
+      }
+   }
 
    return runtime_addr(eb_info, run_ebi);
 }
@@ -1143,6 +1256,9 @@ int esxbootinfo_init(void)
       size_ebi += sizeof(ESXBootInfo_Tpm) + tpm_event_log.size;
    }
    size_ebi += sizeof(ESXBootInfo_LogBuffer);
+   if (boot.report_serial) {
+      size_ebi += sizeof(ESXBootInfo_SerialCon);
+   }
 
 #ifndef __COM32__
    /*

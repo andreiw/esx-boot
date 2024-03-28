@@ -280,13 +280,14 @@ EXTERN void set_firmware_log_callback(void (*callback)(int, const char *, ...));
 EXTERN int firmware_print(const char *str);
 
 /*
- * Serial
+ * Serial.
  */
 #define SERIAL_TYPE_DEFS                       \
    SERIAL_TYPE_DEF(NS16550)                    \
    SERIAL_TYPE_DEF(PL011)                      \
    SERIAL_TYPE_DEF(TMFIFO)                     \
-   SERIAL_TYPE_DEF(AAPL_S5L)
+   SERIAL_TYPE_DEF(AAPL_S5L)                   \
+   SERIAL_TYPE_DEF(SBI)
 
 typedef enum {
 #define SERIAL_TYPE_DEF(x) SERIAL_##x,

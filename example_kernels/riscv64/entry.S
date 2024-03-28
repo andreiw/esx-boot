@@ -3,7 +3,7 @@
 #define ESXBOOTINFO_MAGIC_V2  0x1BADB006
 #define ESXBOOTINFO_ALIGNMENT 8
 #define ESXBOOTINFO_LENGTH    ebh_end - ebh
-#define ESXBOOTINFO_NUM_ELMTS 1
+#define ESXBOOTINFO_NUM_ELMTS 2
 
    .section .rodata
 string_link_va:  .asciz "\nLink VA = 0x"
@@ -45,6 +45,10 @@ feat_load_align:
    .long   1 /* ESXBOOTINFO_FEAT_REQUIRED */
    .long   16
    .long   0x200000
+serial_con:
+   .long   7 /* ESXBOOTINFO_FEAT_SERIAL_CON_TYPE */
+   .long   1 /* ESXBOOTINFO_FEAT_REQUIRED */
+   .long   12
 ebh_end:
 
 stack_setup:

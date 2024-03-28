@@ -227,7 +227,11 @@ EXTERN void log_data(int level, uint8_t *data, size_t length);
 #define DEFAULT_SERIAL_COM      1       /* Default serial port (COM1) */
 #define DEFAULT_SERIAL_BAUDRATE 115200  /* Default serial baud rate */
 
+EXTERN int serial_hw_init(int com, uint32_t baudrate);
 EXTERN int serial_log_init(int com, uint32_t baudrate);
+
+struct uart_t;
+EXTERN struct uart_t *serial_get_uart(void);
 
 /*
  * sort.c
