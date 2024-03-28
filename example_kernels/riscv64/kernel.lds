@@ -20,7 +20,7 @@ SECTIONS
 
    .rodata : { *(.rodata .rodata.*) } : lo_r
    .data   : { *(.data .data.*) } : lo_rw
-   .bss    : { *(.bss .bss.*) } : lo_rw
+   .bss    : { _bss_start = .; *(.bss .bss.*) _bss_end = .; } : lo_rw
 
    /DISCARD/ : { *(.note.gnu.build-id) *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 }

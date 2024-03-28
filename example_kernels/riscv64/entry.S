@@ -1,18 +1,14 @@
 #include "kernel.h"
 
-#define ESXBOOTINFO_MAGIC_V2  0x1BADB006
-#define ESXBOOTINFO_ALIGNMENT 8
-#define ESXBOOTINFO_LENGTH    ebh_end - ebh
-#define ESXBOOTINFO_NUM_ELMTS 2
-
    .section .rodata
 string_link_va:  .asciz "\nLink VA = 0x"
 string_entry_va: .asciz "\nEntry VA = 0x"
 string_a0:       .asciz "\na0 = 0x"
 string_a1:       .asciz "\na1 = 0x"
 string_bye:      .asciz "\nCalling shutdown...\n"
+link_entry:      .quad  entry
 
-   .section .text.entry
+   .section .text
 
 /*
  * Entry point into the "kernel".
@@ -29,35 +25,22 @@ entry:
    mv   t1, a1
    j    stack_setup
 
-/*
- * The ESXBootInfo_Header_V2 passed statically from kernel to bootloader,
- * must be located within the first ESXBOOTINFO_SEARCH bytes of
- * the lowest loaded ELF segment.
- */
-   .balign ESXBOOTINFO_ALIGNMENT
-ebh:
-   .long   ESXBOOTINFO_MAGIC_V2
-   .long   ESXBOOTINFO_LENGTH
-   .long   ESXBOOTINFO_NUM_ELMTS
-   .long   (-(ESXBOOTINFO_MAGIC_V2 + ESXBOOTINFO_LENGTH + ESXBOOTINFO_NUM_ELMTS))
-feat_load_align:
-   .long   6 /* ESXBOOTINFO_FEAT_LOAD_ALIGN */
-   .long   1 /* ESXBOOTINFO_FEAT_REQUIRED */
-   .long   16
-   .long   0x200000
-serial_con:
-   .long   7 /* ESXBOOTINFO_FEAT_SERIAL_CON_TYPE */
-   .long   1 /* ESXBOOTINFO_FEAT_REQUIRED */
-   .long   12
-ebh_end:
-
 stack_setup:
    la   sp, stack_end
+
+clear_bss:
+   la   a0, _bss_start
+   la   a1, _bss_end
+1: beq  a0, a1, show_info
+   sb   zero, 0(a0)
+   addi a0, a0, 1
+   j    1b
 
 show_info:
    la   a0, string_link_va
    jal  sbi_putstring
-   li   a0, LOAD_ADDRESS
+   la   a0, link_entry
+   ld   a0, 0(a0)
    jal  sbi_puthex64
 
    la   a0, string_entry_va
@@ -74,6 +57,9 @@ show_info:
    jal  sbi_putstring
    mv   a0, t1
    jal  sbi_puthex64
+
+   mv   a0, a1
+   jal  c_main
 
 shutdown:
    la   a0, string_bye
