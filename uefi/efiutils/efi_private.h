@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2013,2015-2018,2020-2021 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -37,6 +38,7 @@ void efi_destroy_argv(char **argv);
  * init_arch.c
  */
 int sanitize_page_tables(void);
+int efi_arch_init(void);
 
 /*
  * memory.c

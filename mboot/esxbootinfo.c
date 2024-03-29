@@ -344,6 +344,15 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
          }
          break;
       }
+      case ESXBOOTINFO_FEAT_CPU_MODE_TYPE: {
+         if (feat->feat_size > sizeof (ESXBootInfo_CpuMode)) {
+            Log(LOG_ERR, "Unsupported ESXBOOTINFO_FEAT_CPU_MODE_TYPE size");
+            return ERR_BAD_TYPE;
+         }
+
+         boot.report_cpu_mode = true;
+         break;
+      }
       default:
          break;
       }
@@ -773,6 +782,38 @@ static int esxbootinfo_set_serial_con(void)
    return ERR_SUCCESS;
 }
 
+/*-- esxbootinfo_set_cpu_mode-- ------------------------------------------------
+ *
+ *      Set CPU mode fields in the EBI.
+ *
+ * Parameters
+ *      None.
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *
+ *----------------------------------------------------------------------------*/
+static int esxbootinfo_set_cpu_mode(void)
+{
+   ESXBootInfo_CpuMode *cpu = (void *)next_elmt;
+   int status;
+
+   status = eb_check_space(sizeof(ESXBootInfo_CpuMode));
+   if (status != ERR_SUCCESS) {
+      return status;
+   }
+
+   cpu->type = ESXBOOTINFO_CPU_MODE_TYPE;
+   cpu->elmtSize = sizeof(ESXBootInfo_CpuMode);
+
+#if defined(only_riscv64)
+   cpu->hart_id = RiscVBootHartId;
+#endif /* only_riscv64 */
+
+   eb_advance_next_elmt();
+   return ERR_SUCCESS;
+}
+
 /*-- esxbootinfo_set_runtimewd -------------------------------------------------
  *
  *      Set runtime watchdog fields in the EBI.
@@ -931,6 +972,13 @@ int esxbootinfo_set_runtime_pointers(run_addr_t *run_ebi)
 
    if (boot.report_serial) {
       status = esxbootinfo_set_serial_con();
+      if (status != ERR_SUCCESS) {
+         return status;
+      }
+   }
+
+   if (boot.report_cpu_mode) {
+      status = esxbootinfo_set_cpu_mode();
       if (status != ERR_SUCCESS) {
          return status;
       }
@@ -1258,6 +1306,9 @@ int esxbootinfo_init(void)
    size_ebi += sizeof(ESXBootInfo_LogBuffer);
    if (boot.report_serial) {
       size_ebi += sizeof(ESXBootInfo_SerialCon);
+   }
+   if (boot.report_cpu_mode) {
+      size_ebi += sizeof(ESXBootInfo_CpuMode);
    }
 
 #ifndef __COM32__

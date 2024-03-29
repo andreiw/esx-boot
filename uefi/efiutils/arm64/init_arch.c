@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2018,2021 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -142,5 +143,17 @@ int sanitize_page_tables(void)
    set_page_table_reg(&pdbr);
    paging_enable();
 
+   return ERR_SUCCESS;
+}
+
+/*-- efi_arch_init ------------------------------------------------------------
+ *
+ *      Arch-specific initialization.
+ *
+ * Results
+ *      ERR_SUCCESS, or a generic error status.
+ *----------------------------------------------------------------------------*/
+int efi_arch_init(void)
+{
    return ERR_SUCCESS;
 }

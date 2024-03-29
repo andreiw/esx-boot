@@ -56,21 +56,21 @@ bool esxbootinfo_arch_check_kernel(ESXBootInfo_Header *mbh)
       kernel_mode = mbh->v1.flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
                                      ESXBOOTINFO_FLAG_ARM64_MODE1);
    } else {
-      ESXBootInfo_FeatArm64Mode *arm64;
+      ESXBootInfo_FeatCpuMode *cpu;
 
       FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DO(&mbh->v2,
-                                        ESXBOOTINFO_FEAT_ARM64_MODE_TYPE,
-                                        arm64) {
+                                        ESXBOOTINFO_FEAT_CPU_MODE_TYPE,
+                                        cpu) {
 
-         if (arm64->feat_size > sizeof (ESXBootInfo_FeatArm64Mode)) {
-            Log(LOG_ERR, "Unsupported FEAT_ARM64_MODE size");
+         if (cpu->feat_size > sizeof (ESXBootInfo_FeatCpuMode)) {
+            Log(LOG_ERR, "Unsupported FEAT_CPU_MODE size");
             return false;
          }
 
-         kernel_mode = arm64->flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
-                                       ESXBOOTINFO_FLAG_ARM64_MODE1);
+         kernel_mode = cpu->flags & (ESXBOOTINFO_FLAG_ARM64_MODE0 |
+                                     ESXBOOTINFO_FLAG_ARM64_MODE1);
          break;
-      } FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DONE(&mbh->v2, arm64);
+      } FOR_EACH_ESXBOOTINFO_FEAT_TYPE_DONE(&mbh->v2, cpu);
    }
 
    switch (kernel_mode) {

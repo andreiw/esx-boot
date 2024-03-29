@@ -204,6 +204,10 @@ FDTINC     := $(TOPDIR)/libfdt
 BPINC      := $(TOPDIR)/libbp
 UEFIPROTO  := $(TOPDIR)/uefi/efiutils/protocol
 
+ifneq ($(filter riscv64,$(ARCH)),)
+UEFIINC    += $(EDK2INC)/UefiCpuPkg/Include
+endif
+
 ifneq ($(filter arm64 riscv64,$(ARCH)),)
 ENV_LIB += $(FDTLIB)
 STDINC += $(FDTINC)

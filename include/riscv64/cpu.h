@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2022 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -100,5 +101,10 @@ static ALWAYS_INLINE void cpu_code_update_commit(void)
 {
    __asm__ __volatile__ ("fence.i" ::: "memory");
 }
+
+/*
+ * See uefi/efiutils/riscv64/init_arch.c.
+ */
+EXTERN uint64_t RiscVBootHartId;
 
 #endif /* !CPU_H_ */

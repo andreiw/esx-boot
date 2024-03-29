@@ -138,7 +138,7 @@ typedef struct ESXBootInfo_Header_V1 {
 
 typedef enum ESXBootInfo_FeatType {
    ESXBOOTINFO_FEAT_INVALID_TYPE,
-   ESXBOOTINFO_FEAT_ARM64_MODE_TYPE,
+   ESXBOOTINFO_FEAT_CPU_MODE_TYPE,
    ESXBOOTINFO_FEAT_VIDEO_TYPE,
    ESXBOOTINFO_FEAT_UEFI_TYPE,
    ESXBOOTINFO_FEAT_OS_PRIVATE_TYPE,
@@ -157,17 +157,17 @@ typedef struct ESXBootInfo_FeatElmt {
    uint32_t feat_size;
 } __attribute__((packed)) ESXBootInfo_FeatElmt;
 
-typedef struct ESXBootInfo_FeatArm64Mode {
+typedef struct ESXBootInfo_FeatCpuMode {
    ESXBootInfo_FeatType feat_type;
    uint32_t feat_flags;
    uint32_t feat_size;
    /*
-    * These flags are valid to be used here:
+    * These flags are valid to be used here on AArch64:
     *    ESXBOOTINFO_FLAG_ARM64_MODE0
     *    ESXBOOTINFO_FLAG_ARM64_MODE1
     */
    uint32_t flags;
-}  __attribute__((packed)) ESXBootInfo_FeatArm64Mode;
+}  __attribute__((packed)) ESXBootInfo_FeatCpuMode;
 
 typedef struct ESXBootInfo_FeatVideo {
    ESXBootInfo_FeatType feat_type;
@@ -275,6 +275,7 @@ typedef enum ESXBootInfo_Type {
    ESXBOOTINFO_RWD_TYPE,
    ESXBOOTINFO_LOGBUFFER_TYPE,
    ESXBOOTINFO_SERIAL_CON_TYPE,
+   ESXBOOTINFO_CPU_MODE_TYPE,
    NUM_ESXBOOTINFO_TYPE
 } ESXBootInfo_Type;
 
@@ -422,6 +423,14 @@ typedef struct ESXBootInfo_SerialCon {
     */
    uint32_t baud;
 } __attribute__((packed)) ESXBootInfo_SerialCon;
+
+typedef struct ESXBootInfo_CpuMode {
+   ESXBootInfo_Type type;
+   uint64_t elmtSize;
+#if defined(only_riscv64)
+   uint64_t hart_id;
+#endif /* only_riscv64 */
+} __attribute__((packed)) ESXBootInfo_CpuMode;
 
 /*
  * ESXBootInfo passed from bootloader to kernel.

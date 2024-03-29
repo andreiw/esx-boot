@@ -168,6 +168,7 @@ typedef struct {
    bool serial;               /* Is the serial log enabled? */
    bool tpm_measure;          /* Should TPM measurements be made? */
    bool report_serial;        /* Should serial console be reported? */
+   bool report_cpu_mode;      /* Should ESXBootInfo_CpuMode be reported? */
    bool runtimewd;            /* Is there a hardware runtime watchdog? */
    uint32_t kernel_load_align; /* If not 0, use this alignment (in bytes)
                                   for allocating memory. If 0, use fixed
