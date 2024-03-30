@@ -1,4 +1,8 @@
-#include "kernel.h"
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include "asm-constants.h"
 
 OUTPUT_ARCH("riscv")
 ENTRY(entry)
@@ -11,16 +15,48 @@ PHDRS {
 
 SECTIONS
 {
-   . = LOAD_ADDRESS;
-   .text (LOAD_ADDRESS) :
+   . = LINK_ADDRESS;
+   .text (LINK_ADDRESS) :
    {
       *(.text.entry)
       *(.text .text.*)
    } : lo_rx
 
-   .rodata : { *(.rodata .rodata.*) } : lo_r
-   .data   : { *(.data .data.*) } : lo_rw
-   .bss    : { _bss_start = .; *(.bss .bss.*) _bss_end = .; } : lo_rw
+   .rodata :
+   {
+      *(.rodata .rodata.*)
+   } : lo_r
 
-   /DISCARD/ : { *(.note.gnu.build-id) *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+   .rela   :
+   {
+      _rela_start = .;
+      *(.rela)
+      *(.rela.*)
+      _rela_end = .;
+   } : lo_rw
+
+   .data   :
+   {
+      *(.data .data.*)
+      *(.got)
+   } : lo_rw
+
+   .bss    :
+   {
+      _bss_start = .;
+      *(.bss .bss.*)
+      _bss_end = .;
+   } : lo_rw
+
+   .got.plt : { *(.got.plt) }
+   .plt :
+   {
+      *(.plt) *(.plt.*) *(.iplt) *(.igot .igot.plt)
+   }
+   .data.rel.ro : { *(.data.rel.ro) }
+   ASSERT(SIZEOF(.got.plt) == 0, ".got.plt not 0")
+   ASSERT(SIZEOF(.plt) == 0, ".plt not 0")
+   ASSERT(SIZEOF(.data.rel.ro) == 0, ".data.rel.ro not 0")
+
+   /DISCARD/ : { *(.interp) *(.dynamic) *(.note.gnu.build-id) *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 }

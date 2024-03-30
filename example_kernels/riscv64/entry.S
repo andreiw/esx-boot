@@ -1,12 +1,82 @@
-#include "kernel.h"
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+#include "asm-constants.h"
+
+/*
+ * Print a \str.
+ *
+ * Clobbers: a0, a1, a6, a7.
+ */
+.macro debug_string str
+   la  a0, \str
+   jal sbi_putstring
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value stored in \reg.
+ *
+ * \reg cannot be a0, a1, a2, a3, a6, a7.
+ *
+ * Clobbers: a0, a1, a2, a3, a6, a7.
+ */
+.macro debug_string_reg str, reg
+   la  a0, \str
+   jal sbi_putstring
+   mv  a0, \reg
+   jal sbi_puthex64
+.endm
+
+/*
+ * Print a \str and a 64-bit hex address of \sym.
+ *
+ * Clobbers: a0, a1, a2, a3, a6, a7.
+ */
+.macro debug_string_sym str, sym
+   la  a0, \str
+   jal sbi_putstring
+   la  a0, \sym
+   jal sbi_puthex64
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value stored at \sym.
+ *
+ * Clobbers: a0, a1, a2, a3, a6, a7.
+ */
+.macro debug_string_sym_val64 str, sym
+   la  a0, \str
+   jal sbi_putstring
+   la  a0, \sym
+   ld  a0, 0(a0)
+   jal sbi_puthex64
+.endm
+
+/*
+ * Given a link-time address in \reg, modify \reg
+ * to reflect the load-time (actual) address, by
+ * adding the computed addend from t4.
+ */
+.macro link_to_load reg
+   add \reg, \reg, t4
+.endm
 
    .section .rodata
-string_link_va:  .asciz "\nLink VA = 0x"
-string_entry_va: .asciz "\nEntry VA = 0x"
-string_a0:       .asciz "\na0 = 0x"
-string_a1:       .asciz "\na1 = 0x"
-string_bye:      .asciz "\nCalling shutdown...\n"
-link_entry:      .quad  entry
+string_magic:        .asciz "\nESXBootInfo magic  = 0x"
+string_ebi:          .asciz "\nESXBootInfo struct = 0x"
+string_link_va:      .asciz "\nLink VA            = 0x"
+string_load_va:      .asciz "\nLoad VA            = 0x"
+string_addend:       .asciz "\nAddend (link-load) = 0x"
+string_rela_start:   .asciz "\n_rela_start        = 0x"
+string_rela_end:     .asciz "\n_rela_end          = 0x"
+string_rela_offset:  .asciz "\nr_offset = 0x"
+string_rela_info:    .asciz " r_info = 0x"
+string_rela_addend:  .asciz " r_addend = 0x"
+string_rela_fixed:   .asciz " fixed -> 0x"
+string_rela_skipped: .asciz " skipped?"
+string_go_c:         .asciz "\nCalling C...\n"
+string_bye:          .asciz "\nCalling shutdown...\n"
 
    .section .text
 
@@ -23,7 +93,21 @@ link_entry:      .quad  entry
 entry:
    mv   t0, a0
    mv   t1, a1
-   j    stack_setup
+/*
+ * Compute the addend (link-load) into t4.
+ */
+   li   t3, LINK_ADDRESS
+   la   t4, entry
+   sub  t4, t4, t3
+
+show_info:
+   debug_string_reg   str=string_magic, reg=t0
+   debug_string_reg   str=string_ebi, reg=t1
+   debug_string_reg   str=string_link_va, reg=t3
+   debug_string_sym   str=string_load_va, sym=entry
+   debug_string_reg   str=string_addend, reg=t4
+   debug_string_sym   str=string_rela_start, sym=_rela_start
+   debug_string_sym   str=string_rela_end, sym=_rela_end
 
 stack_setup:
    la   sp, stack_end
@@ -31,39 +115,43 @@ stack_setup:
 clear_bss:
    la   a0, _bss_start
    la   a1, _bss_end
-1: beq  a0, a1, show_info
+1: beq  a0, a1, relocs_run
    sb   zero, 0(a0)
    addi a0, a0, 1
    j    1b
 
-show_info:
-   la   a0, string_link_va
-   jal  sbi_putstring
-   la   a0, link_entry
-   ld   a0, 0(a0)
-   jal  sbi_puthex64
+relocs_run:
+   la   s0, _rela_start
+   la   s1, _rela_end
+1: beq  s0, s1, relocs_done
+   ld   s2, OF_elf64_rela_r_offset(s0)
+   ld   s3, OF_elf64_rela_r_info(s0)
+   ld   s4, OF_elf64_rela_r_addend(s0)
+   debug_string_reg str=string_rela_offset, reg=s2
+   debug_string_reg str=string_rela_info,   reg=s3
+   debug_string_reg str=string_rela_addend, reg=s4
+   addi s0, s0, SZ_elf64_rela
+   li   a0, R_RISCV_RELATIVE
+   bne  s3, a0, rela_skip
+rela_fix:
+   link_to_load reg=s2
+   ld   s3, (s2)
+   add  s3, s3, s4
+   link_to_load reg=s3
+   sd   s3, (s2)
+   debug_string_reg str=string_rela_fixed, reg=s2
+   j    1b
+rela_skip:
+   debug_string str=string_rela_skipped
+   j    1b
 
-   la   a0, string_entry_va
-   jal  sbi_putstring
-   la   a0, entry
-   jal  sbi_puthex64
-
-   la   a0, string_a0
-   jal  sbi_putstring
-   mv   a0, t0
-   jal  sbi_puthex64
-
-   la   a0, string_a1
-   jal  sbi_putstring
+relocs_done:
+   debug_string str=string_go_c
    mv   a0, t1
-   jal  sbi_puthex64
-
-   mv   a0, a1
    jal  c_main
 
 shutdown:
-   la   a0, string_bye
-   jal  sbi_putstring
+   debug_string str=string_bye
    call sbi_shutdown
 
    .section .text
@@ -76,6 +164,7 @@ shutdown:
  * Outputs: N/A.
  * Clobbers: a0, a1, a6, a7.
  */
+   .global sbi_putchar
 sbi_putchar:
    li   a6, 0
    li   a7, 1
