@@ -31,11 +31,10 @@
 
 #include <stddef.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 #ifdef TEST
 #include <stdio.h>
-#define printf simple_printf
-#define sprintf simple_sprintf
 #define simple_putchar putchar
 #else
 #include "kernel.h"
@@ -56,7 +55,8 @@ static void simple_outputchar(char **str, char c)
 
 enum flags {
    PAD_ZERO = 1,
-   PAD_RIGHT   = 2,
+   PAD_RIGHT = 2,
+   PRE_OX = 4,
 };
 
 static int prints(char **out, const char *string, int width, int flags)
@@ -121,6 +121,18 @@ static int simple_outputi(char **out, long long i, int base, int sign, int width
       u /= base;
    }
 
+   if ((flags & PRE_OX) != 0) {
+      if (width != 0) {
+         simple_outputchar (out, '0');
+         simple_outputchar (out, 'x');
+         pc += 2;
+         width -= 2;
+      } else {
+         *--s = 'x';
+         *--s = '0';
+      }
+   }
+
    if (neg) {
       if( width && (flags & PAD_ZERO) ) {
          simple_outputchar (out, '-');
@@ -154,7 +166,7 @@ static int simple_vsprintf(char **out, char *format, va_list ap)
       unsigned short hu;
       signed char hhi;
       unsigned char hhu;
-      void *p;
+      uintptr_t ptr;
    } u;
 
    for (; *format != 0; ++format) {
@@ -214,6 +226,13 @@ static int simple_vsprintf(char **out, char *format, va_list ap)
             u.s = va_arg(ap, char *);
             pc += prints(out, u.s ? u.s : "(null)", width, flags);
             break;
+
+         case('p'):
+            u.ptr = va_arg(ap, uintptr_t);
+            pc += simple_outputi(out, u.ptr, 16, 0, width,
+                                 flags | PRE_OX, 'a');
+            break;
+
          case('l'):
             ++format;
             switch (*format) {
@@ -336,6 +355,7 @@ static int simple_vsprintf(char **out, char *format, va_list ap)
    return pc;
 }
 
+__attribute__ ((format (printf, 1, 2)))
 int simple_printf(char *fmt, ...)
 {
    va_list ap;
@@ -348,6 +368,7 @@ int simple_printf(char *fmt, ...)
    return r;
 }
 
+__attribute__ ((format (printf, 2, 3)))
 int simple_sprintf(char *buf, char *fmt, ...)
 {
    va_list ap;
@@ -361,6 +382,9 @@ int simple_sprintf(char *buf, char *fmt, ...)
 }
 
 #ifdef TEST
+
+#define printf simple_printf
+#define sprintf simple_sprintf
 
 int main(int argc, char *argv[])
 {
@@ -397,11 +421,11 @@ int main(int argc, char *argv[])
    printf("long long hex:               \"%llx\"\n", 0x12345LL);
    printf("long long hex negative:      \"%llx\"\n", -0x12345LL);
    printf("\n");
-   printf("zero-padded LD:         \"%010ld\"\n", 123456);
-   printf("zero-padded LDN:        \"%010ld\"\n", -123456);
-   printf("left-adjusted ZLDN:     \"%-010ld\"\n", -123456);
-   printf("space-padded LDN:       \"%10ld\"\n", -123456);
-   printf("left-adjusted SLDN:     \"%-10ld\"\n", -123456);
+   printf("zero-padded LD:         \"%010ld\"\n", (long) 123456);
+   printf("zero-padded LDN:        \"%010ld\"\n", (long) -123456);
+   printf("left-adjusted ZLDN:     \"%-010ld\"\n", (long) -123456);
+   printf("space-padded LDN:       \"%10ld\"\n", (long) -123456);
+   printf("left-adjusted SLDN:     \"%-10ld\"\n", (long) -123456);
    printf("\n");
    printf("variable pad width:     \"%0*d\"\n", 15, -2345);
    printf("\n");
@@ -412,6 +436,7 @@ int main(int argc, char *argv[])
    printf("space-padded string:    \"%10s\"\n", shortstr);
    printf("left-adjusted S string: \"%-10s\"\n", shortstr);
    printf("null string:            \"%s\"\n", (char *)NULL);
+   printf("pointer:                \"%p\"\n", (void *) 0x1234);
 
    sprintf(buf, "decimal:\t\"%d\"\n", -2345);
    printf("sprintf: %s", buf);

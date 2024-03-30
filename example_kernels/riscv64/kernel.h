@@ -17,6 +17,6 @@ typedef struct elf64_rela {
 } elf64_rela;
 
 void sbi_putchar(char ch);
-int printf(char *fmt, ...);
-int sprintf(char *buf, char *fmt, ...);
+int printf(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+
 

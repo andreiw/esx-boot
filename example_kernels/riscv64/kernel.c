@@ -51,7 +51,6 @@ c_main (ESXBootInfo *ebi)
    volatile uint8_t *uart_base;
 
    uart_base = NULL;
-
    FOR_EACH_ESXBOOTINFO_ELMT_DO(ebi, elmt) {
       switch (elmt->type) {
       case ESXBOOTINFO_SERIAL_CON_TYPE: {
@@ -61,7 +60,7 @@ c_main (ESXBootInfo *ebi)
              con->offset_scaling == 1 &&
              con->access == ESXBOOTINFO_SERIAL_CON_ACCESS_8) {
             uart_base = (void *) con->base;
-            printf("Found compatible UART at 0x%lx\n", uart_base);
+            printf("Found compatible UART at %p\n", uart_base);
          }
          break;
       }
@@ -73,7 +72,7 @@ c_main (ESXBootInfo *ebi)
       default:
       }
    } FOR_EACH_ESXBOOTINFO_ELMT_DONE(ebi, elmt);
-   printf("Command line: %s\n", ebi->cmdline);
+   printf("Command line: %s\n", (char *) ebi->cmdline);
 
    if (uart_base != NULL) {
       while (*hello != '\0') {
