@@ -54,7 +54,7 @@ SECTIONS
       *(.plt) *(.plt.*) *(.iplt) *(.igot .igot.plt)
    }
    .data.rel.ro : { *(.data.rel.ro) }
-   ASSERT(SIZEOF(.got.plt) == 0, ".got.plt not 0")
+   ASSERT(SIZEOF(.got.plt) == 0 || SIZEOF(.got.plt) == 0x10, "Unexpected .got.plt size")
    ASSERT(SIZEOF(.plt) == 0, ".plt not 0")
    ASSERT(SIZEOF(.data.rel.ro) == 0, ".data.rel.ro not 0")
 

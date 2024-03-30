@@ -44,6 +44,9 @@ struct ebh_s ebh = {
 
 const char *hello = "Hello via UART!\n";
 
+extern void some_missing_symbol (void);
+extern void another_missing_symbol (void);
+
 void
 c_main (ESXBootInfo *ebi)
 {
@@ -51,16 +54,16 @@ c_main (ESXBootInfo *ebi)
    volatile uint8_t *uart_base;
 
    uart_base = NULL;
-   FOR_EACH_ESXBOOTINFO_ELMT_DO(ebi, elmt) {
+   FOR_EACH_ESXBOOTINFO_ELMT_DO (ebi, elmt) {
       switch (elmt->type) {
       case ESXBOOTINFO_SERIAL_CON_TYPE: {
          ESXBootInfo_SerialCon *con = (void *) elmt;
          if (con->con_type == ESXBOOTINFO_SERIAL_CON_TYPE_NS16550 &&
-             con->space ==  ESXBOOTINFO_SERIAL_CON_SPACE_MMIO &&
+             con->space == ESXBOOTINFO_SERIAL_CON_SPACE_MMIO &&
              con->offset_scaling == 1 &&
              con->access == ESXBOOTINFO_SERIAL_CON_ACCESS_8) {
             uart_base = (void *) con->base;
-            printf("Found compatible UART at %p\n", uart_base);
+            printf ("Found compatible UART at %p\n", uart_base);
          }
          break;
       }
@@ -72,11 +75,14 @@ c_main (ESXBootInfo *ebi)
       default:
       }
    } FOR_EACH_ESXBOOTINFO_ELMT_DONE(ebi, elmt);
-   printf("Command line: %s\n", (char *) ebi->cmdline);
+   printf ("Command line: %s\n", (char *) ebi->cmdline);
 
    if (uart_base != NULL) {
       while (*hello != '\0') {
          *uart_base = *hello++;
       }
    }
+
+   some_missing_symbol();
+   another_missing_symbol();
 }

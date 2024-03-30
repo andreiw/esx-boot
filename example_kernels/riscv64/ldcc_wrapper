@@ -1,0 +1,31 @@
+#!/bin/bash
+
+compiler=$1
+shift
+
+exit_if_done () {
+   compiler_error=$?
+   if [ $compiler_error -eq 0 ]; then
+      echo "$output"
+      exit
+   fi
+}
+
+call_compiler () {
+   output=$($compiler $@ 2>&1)
+   exit_if_done
+}
+
+call_compiler $@
+
+if echo "$output" | grep -q "undefined reference to"; then
+   echo Stubbing out missing symbols...
+   echo "#include <kernel.h>" > sym-stubs.c
+   echo "$output" | gawk 'match($0, /undefined reference to `(.*)\047/, a) {print "void " a[1] "(void) { printf(\"Missing symbol: " a[1] "\134n\"); }"}' >> sym-stubs.c
+   call_compiler $@ sym-stubs.c
+   exit_if_done
+fi
+
+echo Build not successful with $compiler_error
+echo "$output"
+exit $compiler_error

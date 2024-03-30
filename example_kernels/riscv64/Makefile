@@ -11,9 +11,11 @@ LDFLAGS += -nostdlib -Wl,--build-id=none
 all: kernel.elf
 
 clean:
-	rm -f kernel.elf kernel.ld asm-constants.s asm-constants.h
+	rm -f kernel.elf kernel.ld asm-constants.s asm-constants.h sym-stubs.c
 
-kernel.ld: kernel.lds asm-constants.h
+kernel.lds: asm-constants.h
+
+kernel.ld: kernel.lds
 	$(CC) -xc -E -P $(CFLAGS) -o $@ $<
 
 %.s: %.c
@@ -22,5 +24,11 @@ kernel.ld: kernel.lds asm-constants.h
 asm-constants.h: asm-constants.s
 	grep \#define $< > $@
 
-kernel.elf: kernel.ld asm-constants.h entry.S kernel.c printf.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
+%.o: %.c
+	$(CC) $(CFLAGS) $< -c $@
+
+%.o: %.S
+	$(CC) $(CFLAGS) $< -c $@
+
+kernel.elf: kernel.ld asm-constants.h entry.o kernel.o printf.o
+	./ldcc_wrapper $(CC) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
