@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include "kernel.h"
 
 OUTPUT_ARCH("riscv")

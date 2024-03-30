@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 #include "kernel.h"
 
 #define ESXBOOTINFO_MAGIC_V1  0x1BADB005
