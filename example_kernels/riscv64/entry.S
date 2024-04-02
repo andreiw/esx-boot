@@ -5,6 +5,15 @@
 #include "asm-constants.h"
 #include "asm-env.sinc"
 
+/*
+ * Given a link-time address in \reg, modify \reg
+ * to reflect the load-time (actual) address, by
+ * adding the computed addend from t4.
+ */
+.macro link_to_load reg
+   add \reg, \reg, t4
+.endm
+
    .section .rodata
 string_magic:        .asciz "\nESXBootInfo magic  = 0x"
 string_ebi:          .asciz "\nESXBootInfo struct = 0x"

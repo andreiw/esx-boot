@@ -2,16 +2,40 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+ENV_FILE=old_build_env
+-include $(ENV_FILE)
+
+BUILD_FLAGS =
+ifeq ($(DEBUG), 1)
+BUILD_FLAGS += -DDEBUG
+endif
+BUILD_ENV = "OLD_BUILD_FLAGS=$(BUILD_FLAGS)"
+
+ifneq ($(BUILD_FLAGS),$(OLD_BUILD_FLAGS))
+	PRETARGET=clean_env
+else
+	PRETARGET=log_env
+endif
+
 CC =  riscv64-linux-gnu-gcc
-CFLAGS  += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic -I./
+CFLAGS  += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic -I./ $(BUILD_FLAGS)
 LDFLAGS += -nostdlib -Wl,--build-id=none
 
 .PHONY: clean all
 
-all: kernel.elf
+all: $(PRETARGET) kernel.elf
 
 clean:
 	rm -f kernel.elf kernel.ld asm-constants.h sym-stubs.c *.P *.o
+
+log_env:
+	@echo Resuming build with env \"$(BUILD_FLAGS)\"
+
+log_clean_env:
+	@echo Cleaning due to env change \(was \"$(OLD_BUILD_FLAGS)\" now \"$(BUILD_FLAGS)\"\)
+
+clean_env: log_clean_env clean
+	@echo $(BUILD_ENV) > $(ENV_FILE)
 
 kernel.lds: asm-constants.h
 

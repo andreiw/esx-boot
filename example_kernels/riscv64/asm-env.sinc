@@ -88,6 +88,7 @@
    pop  reg=s1
 .endm
 
+#ifdef DEBUG
 /*
  * Print a \str.
  *
@@ -136,12 +137,16 @@
    ld  a0, 0(a0)
    jal sbi_puthex64
 .endm
-
-/*
- * Given a link-time address in \reg, modify \reg
- * to reflect the load-time (actual) address, by
- * adding the computed addend from t4.
- */
-.macro link_to_load reg
-   add \reg, \reg, t4
+#else
+.macro debug_string str
 .endm
+
+.macro debug_string_reg str, reg
+.endm
+
+.macro debug_string_sym str, sym
+.endm
+
+.macro debug_string_sym_val64 str, sym
+.endm
+#endif
