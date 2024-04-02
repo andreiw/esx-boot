@@ -3,64 +3,7 @@
  */
 
 #include "asm-constants.h"
-
-/*
- * Print a \str.
- *
- * Clobbers: a0, a1, a6, a7.
- */
-.macro debug_string str
-   la  a0, \str
-   jal sbi_putstring
-.endm
-
-/*
- * Print a \str and a 64-bit hex value stored in \reg.
- *
- * \reg cannot be a0, a1, a2, a3, a6, a7.
- *
- * Clobbers: a0, a1, a2, a3, a6, a7.
- */
-.macro debug_string_reg str, reg
-   la  a0, \str
-   jal sbi_putstring
-   mv  a0, \reg
-   jal sbi_puthex64
-.endm
-
-/*
- * Print a \str and a 64-bit hex address of \sym.
- *
- * Clobbers: a0, a1, a2, a3, a6, a7.
- */
-.macro debug_string_sym str, sym
-   la  a0, \str
-   jal sbi_putstring
-   la  a0, \sym
-   jal sbi_puthex64
-.endm
-
-/*
- * Print a \str and a 64-bit hex value stored at \sym.
- *
- * Clobbers: a0, a1, a2, a3, a6, a7.
- */
-.macro debug_string_sym_val64 str, sym
-   la  a0, \str
-   jal sbi_putstring
-   la  a0, \sym
-   ld  a0, 0(a0)
-   jal sbi_puthex64
-.endm
-
-/*
- * Given a link-time address in \reg, modify \reg
- * to reflect the load-time (actual) address, by
- * adding the computed addend from t4.
- */
-.macro link_to_load reg
-   add \reg, \reg, t4
-.endm
+#include "asm-env.sinc"
 
    .section .rodata
 string_magic:        .asciz "\nESXBootInfo magic  = 0x"
@@ -75,6 +18,7 @@ string_rela_info:    .asciz " r_info = 0x"
 string_rela_addend:  .asciz " r_addend = 0x"
 string_rela_fixed:   .asciz " fixed -> 0x"
 string_rela_skipped: .asciz " skipped?"
+string_stack:        .asciz "\nStack pointer      = 0x"
 string_go_c:         .asciz "\nCalling C...\n"
 string_bye:          .asciz "\nCalling shutdown...\n"
 
@@ -100,7 +44,14 @@ entry:
    la   t4, entry
    sub  t4, t4, t3
 
+/*
+ * Code below extensively uses stack, so set this up ASAP.
+ */
+stack_setup:
+   la   sp, stack_end
+
 show_info:
+   debug_string_reg   str=string_stack, reg=sp
    debug_string_reg   str=string_magic, reg=t0
    debug_string_reg   str=string_ebi, reg=t1
    debug_string_reg   str=string_link_va, reg=t3
@@ -108,9 +59,6 @@ show_info:
    debug_string_reg   str=string_addend, reg=t4
    debug_string_sym   str=string_rela_start, sym=_rela_start
    debug_string_sym   str=string_rela_end, sym=_rela_end
-
-stack_setup:
-   la   sp, stack_end
 
 clear_bss:
    la   a0, _bss_start
@@ -146,9 +94,10 @@ rela_skip:
    j    1b
 
 relocs_done:
-   debug_string str=string_go_c
+   debug_string_reg str=string_stack, reg=sp
+   debug_string     str=string_go_c
    mv   a0, t1
-   jal  c_main
+   call_c c_main
 
 shutdown:
    debug_string str=string_bye
@@ -162,15 +111,21 @@ shutdown:
  * Inputs:
  *    a0: Character to print.
  * Outputs: N/A.
- * Clobbers: a0, a1, a6, a7.
+ * Clobbers: Nothing.
  */
-   .global sbi_putchar
-sbi_putchar:
+global_defun sbi_putchar
+   push a0
+   push a1
+   push a6
+   push a7
    li   a6, 0
    li   a7, 1
-ecall:
    ecall
-   ret
+   pop  a7
+   pop  a6
+   pop  a1
+   pop  a0
+retfun
 
 /*
  * Prints a string using SBI console.
@@ -178,9 +133,13 @@ ecall:
  * Inputs:
  *    a0: ASCII string to print.
  * Outputs: N/A.
- * Clobbers: a0, a1, a6, a7.
+ * Clobbers: Nothing.
  */
-sbi_putstring:
+defun sbi_putstring
+   push    a0
+   push    a1
+   push    a6
+   push    a7
    mv      a1, a0
 1: lbu     a0, (a1)
    beqz    a0, 2f
@@ -189,7 +148,11 @@ sbi_putstring:
    ecall
    addi    a1, a1, 1
    j       1b
-2: ret
+2: pop     a7
+   pop     a6
+   pop     a1
+   pop     a0
+retfun
 
 /*
  * Prints a 64-bit unsigned integer using hex chars.
@@ -197,9 +160,15 @@ sbi_putstring:
  * Inputs:
  *    a0: Value to print.
  * Outputs: N/A.
- * Clobbers: a0, a1, a2, a3, a6, a7.
+ * Clobbers: Nothing.
  */
-sbi_puthex64:
+defun sbi_puthex64
+   push    a0
+   push    a1
+   push    a2
+   push    a3
+   push    a6
+   push    a7
    mv      a1, a0
    li      a2, 60
    li      a3, 58
@@ -213,7 +182,13 @@ sbi_puthex64:
 2: ecall
    addi    a2, a2, -4
    bgez    a2, 1b
-   ret
+   pop     a7
+   pop     a6
+   pop     a3
+   pop     a2
+   pop     a1
+   pop     a0
+retfun
 
 /*
  * Shutdown the system.
@@ -225,7 +200,7 @@ sbi_puthex64:
 sbi_shutdown:
    li   a6, 0
    li   a7, 8
-   j    ecall
+   ecall
 
    .section .bss
    .align 12

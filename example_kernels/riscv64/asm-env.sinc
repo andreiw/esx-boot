@@ -1,0 +1,147 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/*
+ * Useful macros to code in assembly with clarity
+ * and convenience.
+ *
+ * _Do_ use global_defun/defun/retfun and push/pop macros
+ * in assembly that get called from other bits of asm,
+ * unless you have a really good reason to. Writing
+ * throw-away initialization functions is not a good
+ * reason. Writing interrupt handlers or perf-sensitive
+ * code may be.
+ *
+ * To simplify the mental tax, any function defined via
+ * global_defun/defun must assume all registers are callee
+ * saved. Any caller of a function defined via global_defun/
+ * defun can thus skip saving _any_ register.
+ */
+
+/*
+ * Begins a function.
+ *
+ * Function prologue just sets a frame pointer.
+ */
+.macro defun name
+\name:
+   sd   ra, -8(sp)
+   sd   s0, -16(sp)
+   mv   s0, sp
+   addi sp, sp, -16
+.endm
+
+/*
+ * Begins a globally-visible function.
+ */
+.macro global_defun name
+   .global \name
+   defun name=\name
+.endm
+
+/*
+ * Completes a function.
+ *
+ * Function epilogue only uses frame pointer to
+ * restore state. I.e. it doesn't matter what SP
+ * was.
+ */
+.macro retfun
+   mv   sp, s0
+   ld   s0, -16(sp)
+   ld   ra, -8(sp)
+   ret
+.endm
+
+/*
+ * Push \reg onto stack.
+ */
+.macro push reg
+   addi sp, sp, -8
+   sd   \reg, 0(sp)
+.endm
+
+/*
+ * Pop stack into \reg.
+ */
+.macro pop reg
+   ld   \reg, 0(s0)
+   addi sp, sp, 8
+.endm
+
+/*
+ * Call a C function.
+ *
+ * Ensures the stack is 16 byte aligned.
+ */
+.macro call_c sym
+   push reg=s1
+   push reg=t0
+   mv   s1, sp
+   andi t0, sp, 8
+   beq  t0, zero, 1f
+   addi sp, sp, -8
+1: call \sym
+   mv   sp, s1
+   pop  reg=t0   
+   pop  reg=s1
+.endm
+
+/*
+ * Print a \str.
+ *
+ * Clobbers: a0.
+ */
+.macro debug_string str
+   la  a0, \str
+   jal sbi_putstring
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value stored in \reg.
+ *
+ * \reg cannot be a0, a1, a2, a3, a6, a7.
+ *
+ * Clobbers: a0.
+ */
+.macro debug_string_reg str, reg
+   la  a0, \str
+   jal sbi_putstring
+   mv  a0, \reg
+   jal sbi_puthex64
+.endm
+
+/*
+ * Print a \str and a 64-bit hex address of \sym.
+ *
+ * Clobbers: a0.
+ */
+.macro debug_string_sym str, sym
+   la  a0, \str
+   jal sbi_putstring
+   la  a0, \sym
+   jal sbi_puthex64
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value stored at \sym.
+ *
+ * Clobbers: a0.
+ */
+.macro debug_string_sym_val64 str, sym
+   la  a0, \str
+   jal sbi_putstring
+   la  a0, \sym
+   ld  a0, 0(a0)
+   jal sbi_puthex64
+.endm
+
+/*
+ * Given a link-time address in \reg, modify \reg
+ * to reflect the load-time (actual) address, by
+ * adding the computed addend from t4.
+ */
+.macro link_to_load reg
+   add \reg, \reg, t4
+.endm
