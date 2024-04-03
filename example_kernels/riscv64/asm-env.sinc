@@ -17,6 +17,11 @@
  * defun_global/defun must assume all registers are callee
  * saved. Any caller of a function defined via defun_global/
  * defun can thus skip saving _any_ register.
+ *
+ * The trade-off here is having less efficient code, yet
+ * code that is robust in the face of long term maintainability.
+ * The efficiency aspect is overall irrelevant when it comes
+ * to throw-away initialization code that is executed once.
  */
 
 /*
