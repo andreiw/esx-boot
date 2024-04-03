@@ -2,23 +2,46 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+ifndef V
+   # V not set: Terse messages; can be hard to debug makefile issues.
+   MAKEFLAGS += -s
+else
+ifeq (0,$(V))
+   # V=0: Same as VERBOSE not set.
+   MAKEFLAGS += -s
+else
+   # V=1 (or other value): Maximally verbose messages.
+endif
+endif
+
 ENV_FILE=old_build_env
 -include $(ENV_FILE)
 
+BUILD_ENV =
 BUILD_FLAGS =
 ifeq ($(DEBUG), 1)
-BUILD_FLAGS += -DDEBUG
+	BUILD_ENV += DEBUG
+	BUILD_FLAGS += -DDEBUG
+	WITH_BRING_UP_SYM_STUBS=1
 endif
-BUILD_ENV = "OLD_BUILD_FLAGS=$(BUILD_FLAGS)"
+ifeq ($(WITH_BRING_UP_SYM_STUBS), 1)
+	BUILD_ENV += WITH_BRING_UP_SYM_STUBS
+	BUILD_FLAGS += -DWITH_BRING_UP_SYM_STUBS
+endif
 
-ifneq ($(BUILD_FLAGS),$(OLD_BUILD_FLAGS))
+ifneq ($(BUILD_ENV),$(OLD_BUILD_ENV))
 	PRETARGET=clean_env
 else
 	PRETARGET=log_env
 endif
 
+ECHO = @echo
 CC =  riscv64-linux-gnu-gcc
 CFLAGS  += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic -I./ $(BUILD_FLAGS)
+LINKER = $(CC)
+ifeq ($(WITH_BRING_UP_SYM_STUBS), 1)
+	LINKER=./ldcc_wrapper $(CC)
+endif
 LDFLAGS += -nostdlib -Wl,--build-id=none
 
 .PHONY: clean all
@@ -29,13 +52,13 @@ clean:
 	rm -f kernel.elf kernel.ld asm-constants.h sym-stubs.c *.P *.o
 
 log_env:
-	@echo Resuming build with env \"$(BUILD_FLAGS)\"
+	$(ECHO) Resuming build with env \"$(BUILD_ENV)\"
 
 log_clean_env:
-	@echo Cleaning due to env change \(was \"$(OLD_BUILD_FLAGS)\" now \"$(BUILD_FLAGS)\"\)
+	$(ECHO) Cleaning due to env change \(was \"$(OLD_BUILD_ENV)\" now \"$(BUILD_ENV)\"\)
 
 clean_env: log_clean_env clean
-	@echo $(BUILD_ENV) > $(ENV_FILE)
+	$(ECHO) "OLD_BUILD_ENV=$(BUILD_ENV)" > $(ENV_FILE)
 
 kernel.lds: asm-constants.h
 
@@ -66,6 +89,6 @@ asm-constants.h: asm-constants.c
    rm -f $*.d
 
 kernel.elf: kernel.ld asm-constants.h entry.o kernel.o printf.o
-	./ldcc_wrapper $(CC) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
+	$(LINKER) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
 
 -include *.P

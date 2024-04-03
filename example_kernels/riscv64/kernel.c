@@ -83,6 +83,8 @@ c_main (ESXBootInfo *ebi)
       }
    }
 
+#ifdef WITH_BRING_UP_SYM_STUBS
    some_missing_symbol();
    another_missing_symbol();
+#endif /* WITH_BRING_UP_SYM_STUBS */
 }
