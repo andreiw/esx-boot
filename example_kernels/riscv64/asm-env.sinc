@@ -90,6 +90,15 @@
 
 #ifdef DEBUG
 /*
+ * Define a NUL-terminated ASCII string for use with
+ * debug macros below.
+ */
+.macro debug_asciz sym, str
+ \sym:
+    .asciz "\str"
+.endm
+
+/*
  * Print a \str.
  *
  * Clobbers: a0.
@@ -138,6 +147,13 @@
    jal sbi_puthex64
 .endm
 #else
+/*
+ * On non-debugging builds all of these do nothing.
+ */
+
+.macro debug_asciz sym, str
+.endm
+
 .macro debug_string str
 .endm
 

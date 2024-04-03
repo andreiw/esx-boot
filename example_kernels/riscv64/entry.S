@@ -15,21 +15,21 @@
 .endm
 
    .section .rodata
-string_magic:        .asciz "\nESXBootInfo magic  = 0x"
-string_ebi:          .asciz "\nESXBootInfo struct = 0x"
-string_link_va:      .asciz "\nLink VA            = 0x"
-string_load_va:      .asciz "\nLoad VA            = 0x"
-string_addend:       .asciz "\nAddend (link-load) = 0x"
-string_rela_start:   .asciz "\n_rela_start        = 0x"
-string_rela_end:     .asciz "\n_rela_end          = 0x"
-string_rela_offset:  .asciz "\nr_offset = 0x"
-string_rela_info:    .asciz " r_info = 0x"
-string_rela_addend:  .asciz " r_addend = 0x"
-string_rela_fixed:   .asciz " fixed -> 0x"
-string_rela_skipped: .asciz " skipped?"
-string_stack:        .asciz "\nStack pointer      = 0x"
-string_go_c:         .asciz "\nCalling C...\n"
-string_bye:          .asciz "\nCalling shutdown...\n"
+debug_asciz string_magic,       "\nESXBootInfo magic  = 0x"
+debug_asciz string_ebi,         "\nESXBootInfo struct = 0x"
+debug_asciz string_link_va,     "\nLink VA            = 0x"
+debug_asciz string_load_va,     "\nLoad VA            = 0x"
+debug_asciz string_addend,      "\nAddend (link-load) = 0x"
+debug_asciz string_rela_start,  "\n_rela_start        = 0x"
+debug_asciz string_rela_end,    "\n_rela_end          = 0x"
+debug_asciz string_rela_offset, "\nr_offset = 0x"
+debug_asciz string_rela_info,   " r_info = 0x"
+debug_asciz string_rela_addend, " r_addend = 0x"
+debug_asciz string_rela_fixed,  " fixed -> 0x"
+debug_asciz string_rela_skipped," skipped?"
+debug_asciz string_stack,       "\nStack pointer      = 0x"
+debug_asciz string_go_c,        "\nCalling C...\n"
+debug_asciz string_bye,         "\nCalling shutdown...\n"
 
    .section .text
 
