@@ -6,6 +6,16 @@
 
 #include <inttypes.h>
 
+#define PAGE_SIZE    4096
+#define STACK_PAGES  1
+/*
+ * Mapping the kernel itself using 2MB megapage. Assume
+ * 1 us enough for now. We could be using up to five
+ * page table levels (we won't know until we try
+ * enabling!).
+ */
+#define EARLY_PAGES  4
+
 #define LINK_ADDRESS 0x80300000
 
 #define R_RISCV_RELATIVE 0x3

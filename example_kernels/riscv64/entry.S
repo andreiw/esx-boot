@@ -30,6 +30,7 @@ debug_asciz string_rela_skipped," skipped?"
 debug_asciz string_stack,       "\nStack pointer      = 0x"
 debug_asciz string_go_c,        "\nCalling C...\n"
 debug_asciz string_bye,         "\nCalling shutdown...\n"
+string_panic: .asciz            "\nPanic RA=0x"
 
    .section .text
 
@@ -57,7 +58,7 @@ entry:
  * Code below extensively uses stack, so set this up ASAP.
  */
 stack_setup:
-   la   sp, stack_end
+   la   sp, _stack_end
 
 show_info:
    debug_string_reg   str=string_stack, reg=sp
@@ -99,20 +100,46 @@ rela_fix:
    debug_string_reg str=string_rela_fixed, reg=s2
    j    1b
 rela_skip:
-   debug_string str=string_rela_skipped
+   debug_string string_rela_skipped
    j    1b
 
 relocs_done:
    debug_string_reg str=string_stack, reg=sp
-   debug_string     str=string_go_c
+   debug_string string_go_c
    mv   a0, t1
    call_c c_main
 
+   jal early_page_alloc
+   jal sbi_puthex64
+   jal early_page_alloc
+   jal sbi_puthex64
+   jal early_page_alloc
+   jal sbi_puthex64
+   jal early_page_alloc
+   jal sbi_puthex64
+   jal early_page_alloc
+   jal sbi_puthex64
+   jal early_page_alloc
+   jal sbi_puthex64
+
 shutdown:
-   debug_string str=string_bye
    call sbi_shutdown
 
-   .section .text
+/*
+ * Fatal error handling.
+ *
+ * Inputs: N/A.
+ * Outputs: Doesn't return.
+ * Clobbers: a0, a1.
+ */
+defun_global panic
+   mv  a1, ra
+   la  a0, string_panic
+   jal sbi_putstring
+   mv  a0, a1
+   jal sbi_puthex64
+   j   sbi_shutdown
+retfun
 
 /*
  * Prints a char using SBI console.
@@ -122,7 +149,7 @@ shutdown:
  * Outputs: N/A.
  * Clobbers: Nothing.
  */
-global_defun sbi_putchar
+defun_global sbi_putchar
    push a0
    push a1
    push a6
@@ -144,7 +171,7 @@ retfun
  * Outputs: N/A.
  * Clobbers: Nothing.
  */
-defun sbi_putstring
+defun_global sbi_putstring
    push    a0
    push    a1
    push    a6
@@ -164,7 +191,8 @@ defun sbi_putstring
 retfun
 
 /*
- * Prints a 64-bit unsigned integer using hex chars.
+ * Prints a 64-bit unsigned integer using hex chars,
+ * followed by a single space char.
  *
  * Inputs:
  *    a0: Value to print.
@@ -180,17 +208,19 @@ defun sbi_puthex64
    push    a7
    mv      a1, a0
    li      a2, 60
-   li      a3, 58
+   li      a3, '9'
    li      a6, 0
    li      a7, 1
 1: srl     a0, a1, a2
    andi    a0, a0, 0xf
-   addi    a0, a0, 48
-   bltu    a0, a3, 2f
-   addi    a0, a0, 39
+   addi    a0, a0, '0'
+   bleu    a0, a3, 2f
+   addi    a0, a0, 'a' - ('9' + 1)
 2: ecall
    addi    a2, a2, -4
    bgez    a2, 1b
+   li      a0, ' '
+   ecall
    pop     a7
    pop     a6
    pop     a3
@@ -204,15 +234,10 @@ retfun
  *
  * Inputs: N/A.
  * Outputs: Doesn't return.
- * Clobbers: N/A.
+ * Clobbers: a0 (on DEBUG=1), a6, a7.
  */
 sbi_shutdown:
+   debug_string string_bye
    li   a6, 0
    li   a7, 8
    ecall
-
-   .section .bss
-   .align 12
-stack:
-   .fill 4096
-stack_end:

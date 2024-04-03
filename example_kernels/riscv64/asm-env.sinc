@@ -14,8 +14,8 @@
  * code may be.
  *
  * To simplify the mental tax, any function defined via
- * global_defun/defun must assume all registers are callee
- * saved. Any caller of a function defined via global_defun/
+ * defun_global/defun must assume all registers are callee
+ * saved. Any caller of a function defined via defun_global/
  * defun can thus skip saving _any_ register.
  */
 
@@ -35,7 +35,7 @@
 /*
  * Begins a globally-visible function.
  */
-.macro global_defun name
+.macro defun_global name
    .global \name
    defun name=\name
 .endm
@@ -66,7 +66,7 @@
  * Pop stack into \reg.
  */
 .macro pop reg
-   ld   \reg, 0(s0)
+   ld   \reg, 0(sp)
    addi sp, sp, 8
 .endm
 
@@ -86,6 +86,14 @@
    mv   sp, s1
    pop  reg=t0   
    pop  reg=s1
+.endm
+
+/*
+ * Fatal error.
+ */
+.macro fatal str
+   debug_string \str
+   call panic
 .endm
 
 #ifdef DEBUG

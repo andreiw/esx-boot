@@ -45,6 +45,13 @@ SECTIONS
    {
       _bss_start = .;
       *(.bss .bss.*)
+      . = ALIGN(PAGE_SIZE);
+      _stack_start = .;
+      . += PAGE_SIZE * STACK_PAGES;
+      _stack_end = .;
+      _early_pages_start = .;
+      . += PAGE_SIZE * EARLY_PAGES;
+      _early_pages_end = .;
       _bss_end = .;
    } : lo_rw
 

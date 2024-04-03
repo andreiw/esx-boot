@@ -22,6 +22,9 @@ void dummy (void)
   OFFSETOF(elf64_rela, r_offset);
   OFFSETOF(elf64_rela, r_info);
   OFFSETOF(elf64_rela, r_addend);
+  IDENTIFIER(PAGE_SIZE);
+  IDENTIFIER(STACK_PAGES);
+  IDENTIFIER(EARLY_PAGES);
 }
 
 
