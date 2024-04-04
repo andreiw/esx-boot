@@ -44,8 +44,11 @@ struct ebh_s ebh = {
 
 const char *hello = "Hello via UART!\n";
 
+#ifdef WITH_BRING_UP_SYM_STUBS
 extern void some_missing_symbol (void);
 extern void another_missing_symbol (void);
+#endif /* WITH_BRING_UP_SYM_STUBS */
+extern void mmu_init (void);
 
 void
 c_main (ESXBootInfo *ebi)
@@ -84,7 +87,15 @@ c_main (ESXBootInfo *ebi)
    }
 
 #ifdef WITH_BRING_UP_SYM_STUBS
-   some_missing_symbol();
-   another_missing_symbol();
+   some_missing_symbol ();
+   another_missing_symbol ();
 #endif /* WITH_BRING_UP_SYM_STUBS */
+
+   printf ("Going to enable the MMU");
+   /*
+    * Written in assembly because it's supposed to be called
+    * before we go to C, but I don't have code to map the UART yet.
+    */
+   mmu_init();
+   printf ("\nMMU is enabled");
 }

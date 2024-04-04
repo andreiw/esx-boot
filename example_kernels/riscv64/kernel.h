@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 
-#define LINK_ADDRESS 0x80300000
+#define LINK_ADDRESS 0x80300000UL
 #define STACK_PAGES  1
 /*
  * Mapping the kernel itself using 2MB megapage. Assume
@@ -23,6 +23,15 @@ typedef struct elf64_rela {
   uint64_t r_addend;
 } elf64_rela;
 
+#define SATP_MODE_BARE  0UL
+#define SATP_MODE_SV39  8UL
+#define SATP_MODE_SV48  9UL
+#define SATP_MODE_SV57  10UL
+#define SATP_MODE_SHIFT 60
+#define SATP_SV39       (SATP_MODE_SV39 << SATP_MODE_SHIFT)
+#define SATP_SV48       (SATP_MODE_SV48 << SATP_MODE_SHIFT)
+#define SATP_SV57       (SATP_MODE_SV57 << SATP_MODE_SHIFT)
+
 /*
  * We can have up to 5 levels on RISC-V, let's call
  * these L0 (which contains entries mapping 4KiB pages) to
@@ -30,12 +39,12 @@ typedef struct elf64_rela {
  *
  * Each page level is indexed by PG_TAB_SHIFT (i.e. 512 entries).
  */
-#define PG_BASE_SHIFT              12
+#define PG_BASE_SHIFT              12UL
 #define PG_BASE_SIZE               (1UL << PG_BASE_SHIFT)
 #define PG_BASE_MASK               (PG_BASE_SIZE - 1)
 #define PG_BASE_MASK_INVERSE       (~PG_BASE_MASK)
-#define PG_TAB_SHIFT               9
-#define PG_TAB_ENTRIES             (1 << PG_TAB_SHIFT)
+#define PG_TAB_SHIFT               9UL
+#define PG_TAB_ENTRIES             (1UL << PG_TAB_SHIFT)
 #define PG_TAB_MASK                (PG_TAB_ENTRIES - 1)
 #define PG_LEVEL_SHIFT(level)      (((level) * PG_TAB_SHIFT) + PG_BASE_SHIFT)
 #define PG_LEVEL_SIZE(level)       (1UL << PG_LEVEL_SHIFT(level))
@@ -56,7 +65,7 @@ typedef struct elf64_rela {
 #define PG_LEVEL3_MASK             PG_LEVEL_MASK(3)
 #define PG_LEVEL4_MASK             PG_LEVEL_MASK(4)
 #define PG_LEVEL_OFFSET(level, va) ((va) >> PG_LEVEL_SHIFT(level)) & PG_TAB_MASK)
-#define PG_ENT_PPN_MASK            0x3FFFFFFFFFFC00
+#define PG_ENT_PPN_MASK            0x3FFFFFFFFFFC00UL
 /*
  * PPN is in bits [10:53].
  */

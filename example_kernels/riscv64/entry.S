@@ -108,7 +108,6 @@ relocs_done:
    mv   a0, t1
    call_c c_main
 
-   jal  mmu_init
 shutdown:
    call sbi_shutdown
 

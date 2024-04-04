@@ -135,9 +135,7 @@ m\@_0:
    mv   \temp, \ma
    srli \temp, \temp, PG_ENT_PPN_SHIFT
    ori  \temp, \temp, PG_ENT_VALID
-   ori  \temp, \temp, PG_ENT_READ
-   ori  \temp, \temp, PG_ENT_WRITE
-   ori  \temp, \temp, PG_ENT_EXECUTE
+   ori  \temp, \temp, PG_ENT_READ | PG_ENT_WRITE | PG_ENT_EXECUTE
    sd   \temp, (\entry_va)
 .endm
 
@@ -145,6 +143,11 @@ m\@_0:
 debug_asciz string_map_bad_align "Unaligned MA for mapping"
 debug_asciz string_mapped1       "\nMapping 0x"
 debug_asciz string_mapped2       "with PTE 0x"
+debug_asciz string_satp57        "\nSv57 SATP = 0x"
+debug_asciz string_satp48        "\nSv48 SATP = 0x"
+debug_asciz string_satp39        "\nSv39 SATP = 0x"
+debug_asciz string_satp          "\nSwitched SATP to 0x"
+debug_asciz string_no_satp       "\nUnsupported MMU"
 
    .section .text
 defun_global mmu_init
@@ -154,7 +157,7 @@ defun_global mmu_init
    push a3
    push a4
    /*
-    * L5 (root).
+    * L5 (root) in a0.
     */
    jal  early_page_alloc
    la   a1, _start
@@ -165,7 +168,6 @@ defun_global mmu_init
     */
 map_megapage:
    mv   a3, a0
-   bgt  a1, a2, done
    debug_string_reg str=string_mapped1, reg=a1
    mmu_va_2_tab tab_va=a3, va=a1, level=4, temp=a4, next_tab_va=a3
    mmu_va_2_tab tab_va=a3, va=a1, level=3, temp=a4, next_tab_va=a3
@@ -175,8 +177,45 @@ map_megapage:
    debug_string_dereg_val64 str=string_mapped2, reg=a3
    li   a4, PG_LEVEL1_SIZE
    add  a1, a1, a4
-   j    map_megapage
+   blt  a1, a2, map_megapage
+   /*
+    * We don't know how many levels the CPU supports. So we probe.
+    *
+    * First, build up the SATP values.
+    *
+    * a0 is the Sv57 (L4) root SATP value.
+    * a1 is the Sv48 (L3) root SATP value.
+    * a2 is the Sv39 (L2) root SATP value.
+    */
+   srli a0, a0, PG_BASE_SHIFT
+   addi a1, a0, 1
+   addi a2, a1, 1
+   li   a3, SATP_SV57
+   or   a0, a0, a3
+   li   a3, SATP_SV48
+   or   a1, a1, a3
+   li   a3, SATP_SV39
+   or   a2, a2, a3
+   debug_string_reg str=string_satp57, reg=a0
+   debug_string_reg str=string_satp48, reg=a1
+   debug_string_reg str=string_satp39, reg=a2
+   /*
+    * Try setting SATP. If the value doesn't stick, try the
+    * next value.
+    */
+   csrw satp, a0
+   csrr a4, satp
+   beq  a4, a0, done
+   csrw satp, a1
+   csrr a4, satp
+   beq  a4, a1, done
+   csrw satp, a2
+   csrr a4, satp
+   beq  a4, a2, done
+   fatal string_no_satp
 done:
+   sfence.vma
+   debug_string_reg str=string_satp, reg=a4
    pop a4
    pop a3
    pop a2
