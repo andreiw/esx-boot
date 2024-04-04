@@ -30,7 +30,7 @@ defun_global early_page_alloc
    bne  a0, a2, 1f
    fatal string_early_pages   
 1:
-   li   a3, PAGE_SIZE
+   li   a3, PG_BASE_SIZE
    add  a2, a0, a3
    sd   a2, (a1)
    pop  a3

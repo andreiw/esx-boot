@@ -78,28 +78,29 @@
    macro_arg_is_not \entry_va, \temp, "entry_va cannot be temp"
    macro_arg_is_not \next_tab_va, \temp, "next_tab_va cannot be temp"
    ld   \temp, (\entry_va)
-   bnez \temp, 1f
+   bnez \temp, m\@_0
    /*
     * Need to allocate.
-    */   
+    */
    mmu_entry_new_tab entry_va=\entry_va, entry=\temp
    /*
     * Entry exists (is not zero), so extract
     * the address inside. Since this code runs
     * with 1:1 mapping, VA == PA.
     */
-1: mv   \next_tab_va, \temp
+m\@_0:
+   mv   \next_tab_va, \temp
    li   \temp, PG_ENT_PPN_MASK
    and  \next_tab_va, \next_tab_va, \temp
    slli \next_tab_va, \next_tab_va, PG_ENT_PPN_SHIFT
-.endm        
+.endm
 
 /*
  * Given a page table of \level, return the table of level - 1
  * corresponding to the \va.
  *
  * Hint: \tab_va and \next_tab_va can be the same registers.
- * 
+ *
  * Inputs:
  *    \tab_va: Register containing page table VA.
  *    \va:     Register containing VA for lookup.
@@ -113,11 +114,25 @@
 .endm
 
 /*
- * Given a page table entry
+ * Given an L1 page table entry, fill it with an RWX
+ * mapping for \ma.
+ *
+ * Inputs:
+ *    \entry_va: Register containing L1 page table VA.
+ *    \ma:       Register containing 2MiB-aligned MA.
+ * Clobbers: \temp, scratch register.
  */
 .macro mmu_map_mega entry_va, ma, temp
-   li   \temp, PAGE_MASK_INVERSE
+   macro_arg_is_not \temp, \entry_va, "temp cannot be entry_va"
+   macro_arg_is_not \temp, \ma, "temp cannot be ma"
+#ifdef DEBUG
+   li   \temp, PG_LEVEL1_MASK
    and  \temp, \temp, \ma
+   beqz \temp, m\@_0
+   fatal string_map_bad_align
+m\@_0:
+#endif /* DEBUG */
+   mv   \temp, \ma
    srli \temp, \temp, PG_ENT_PPN_SHIFT
    ori  \temp, \temp, PG_ENT_VALID
    ori  \temp, \temp, PG_ENT_READ
@@ -127,8 +142,9 @@
 .endm
 
    .section .rodata
-debug_asciz string_mapped1  "\nMapped 0x"
-debug_asciz string_mapped2  "with PTE 0x"
+debug_asciz string_map_bad_align "Unaligned MA for mapping"
+debug_asciz string_mapped1       "\nMapping 0x"
+debug_asciz string_mapped2       "with PTE 0x"
 
    .section .text
 defun_global mmu_init
@@ -136,22 +152,32 @@ defun_global mmu_init
    push a1
    push a2
    push a3
+   push a4
    /*
     * L5 (root).
     */
    jal  early_page_alloc
-   mv   a3, a0
+   la   a1, _start
+   la   a2, _end
    /*
-    * Map the kernel using 1 megapage, with VA == PA.
+    * Map the kernel between _start and _end using megapages,
+    * with VA == PA.
     */
-   la   a1, entry
-   mmu_va_2_tab tab_va=a0, va=a1, level=4, temp=a2, next_tab_va=a0
-   mmu_va_2_tab tab_va=a0, va=a1, level=3, temp=a2, next_tab_va=a0
-   mmu_va_2_tab tab_va=a0, va=a1, level=2, temp=a2, next_tab_va=a0
-   mmu_va_2_entry tab_va=a0, va=a1, level=1, temp=a2, entry_va=a0
-   mmu_map_mega entry_va=a0, ma=a1, temp=a2
+map_megapage:
+   mv   a3, a0
+   bgt  a1, a2, done
    debug_string_reg str=string_mapped1, reg=a1
-   debug_string_dereg_val64 str=string_mapped2, reg=a0
+   mmu_va_2_tab tab_va=a3, va=a1, level=4, temp=a4, next_tab_va=a3
+   mmu_va_2_tab tab_va=a3, va=a1, level=3, temp=a4, next_tab_va=a3
+   mmu_va_2_tab tab_va=a3, va=a1, level=2, temp=a4, next_tab_va=a3
+   mmu_va_2_entry tab_va=a3, va=a1, level=1, temp=a4, entry_va=a3
+   mmu_map_mega entry_va=a3, ma=a1, temp=a4
+   debug_string_dereg_val64 str=string_mapped2, reg=a3
+   li   a4, PG_LEVEL1_SIZE
+   add  a1, a1, a4
+   j    map_megapage
+done:
+   pop a4
    pop a3
    pop a2
    pop a1

@@ -103,9 +103,10 @@
    push t0
    mv   s1, sp
    andi t0, sp, 8
-   beq  t0, zero, 1f
+   beq  t0, zero, m\@_0
    addi sp, sp, -8
-1: call \sym
+m\@_0:
+   call \sym
    mv   sp, s1
    pop  t0
    pop  s1

@@ -16,6 +16,7 @@ PHDRS {
 SECTIONS
 {
    . = LINK_ADDRESS;
+   _start = .;
    .text (LINK_ADDRESS) :
    {
       *(.text.entry)
@@ -45,15 +46,16 @@ SECTIONS
    {
       _bss_start = .;
       *(.bss .bss.*)
-      . = ALIGN(PAGE_SIZE);
+      . = ALIGN(PG_BASE_SIZE);
       _stack_start = .;
-      . += PAGE_SIZE * STACK_PAGES;
+      . += PG_BASE_SIZE * STACK_PAGES;
       _stack_end = .;
       _early_pages_start = .;
-      . += PAGE_SIZE * EARLY_PAGES;
+      . += PG_BASE_SIZE * EARLY_PAGES;
       _early_pages_end = .;
       _bss_end = .;
    } : lo_rw
+   _end = .;
 
    .got.plt : { *(.got.plt) }
    .plt :
@@ -61,7 +63,7 @@ SECTIONS
       *(.plt) *(.plt.*) *(.iplt) *(.igot .igot.plt)
    }
    .data.rel.ro : { *(.data.rel.ro) }
-   ASSERT(SIZEOF(.got.plt) == 0 || SIZEOF(.got.plt) == 0x10, "Unexpected .got.plt size")
+   ASSERT(SIZEOF(.got.plt) == 0, "Unexpected .got.plt size")
    ASSERT(SIZEOF(.plt) == 0, ".plt not 0")
    ASSERT(SIZEOF(.data.rel.ro) == 0, ".data.rel.ro not 0")
 

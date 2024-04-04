@@ -30,20 +30,31 @@ typedef struct elf64_rela {
  *
  * Each page level is indexed by PG_TAB_SHIFT (i.e. 512 entries).
  */
-#define PAGE_SHIFT                 12
-#define PAGE_SIZE                  (1UL << PAGE_SHIFT)
-#define PAGE_MASK                  (PAGE_SIZE - 1)
-#define PAGE_MASK_INVERSE          (~PAGE_MASK)
+#define PG_BASE_SHIFT              12
+#define PG_BASE_SIZE               (1UL << PG_BASE_SHIFT)
+#define PG_BASE_MASK               (PG_BASE_SIZE - 1)
+#define PG_BASE_MASK_INVERSE       (~PG_BASE_MASK)
 #define PG_TAB_SHIFT               9
 #define PG_TAB_ENTRIES             (1 << PG_TAB_SHIFT)
 #define PG_TAB_MASK                (PG_TAB_ENTRIES - 1)
-#define PG_LEVEL_SHIFT(level)      (((level) * PG_TAB_SHIFT) + PAGE_SHIFT)
+#define PG_LEVEL_SHIFT(level)      (((level) * PG_TAB_SHIFT) + PG_BASE_SHIFT)
 #define PG_LEVEL_SIZE(level)       (1UL << PG_LEVEL_SHIFT(level))
+#define PG_LEVEL_MASK(level)       (PG_LEVEL_SIZE(level) - 1)
 #define PG_LEVEL0_SHIFT            PG_LEVEL_SHIFT(0)
 #define PG_LEVEL1_SHIFT            PG_LEVEL_SHIFT(1)
 #define PG_LEVEL2_SHIFT            PG_LEVEL_SHIFT(2)
 #define PG_LEVEL3_SHIFT            PG_LEVEL_SHIFT(3)
 #define PG_LEVEL4_SHIFT            PG_LEVEL_SHIFT(4)
+#define PG_LEVEL0_SIZE             PG_LEVEL_SIZE(0)
+#define PG_LEVEL1_SIZE             PG_LEVEL_SIZE(1)
+#define PG_LEVEL2_SIZE             PG_LEVEL_SIZE(2)
+#define PG_LEVEL3_SIZE             PG_LEVEL_SIZE(3)
+#define PG_LEVEL4_SIZE             PG_LEVEL_SIZE(4)
+#define PG_LEVEL0_MASK             PG_LEVEL_MASK(0)
+#define PG_LEVEL1_MASK             PG_LEVEL_MASK(1)
+#define PG_LEVEL2_MASK             PG_LEVEL_MASK(2)
+#define PG_LEVEL3_MASK             PG_LEVEL_MASK(3)
+#define PG_LEVEL4_MASK             PG_LEVEL_MASK(4)
 #define PG_LEVEL_OFFSET(level, va) ((va) >> PG_LEVEL_SHIFT(level)) & PG_TAB_MASK)
 #define PG_ENT_PPN_MASK            0x3FFFFFFFFFFC00
 /*

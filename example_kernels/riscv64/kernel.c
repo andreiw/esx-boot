@@ -12,7 +12,7 @@
 /*
  * 2MiB (megapage) alignment.
  */
-#define LOAD_ALIGNMENT 0x200000
+#define LOAD_ALIGNMENT PG_LEVEL1_SIZE
 
 struct ebh_s {
   ESXBootInfo_Header_V2 header;
