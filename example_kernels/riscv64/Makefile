@@ -47,6 +47,7 @@ LDFLAGS += -nostdlib -Wl,--build-id=none
 .PHONY: clean all
 
 all: $(PRETARGET) kernel.elf
+	@file kernel.elf
 
 clean:
 	rm -f kernel.elf kernel.ld asm-constants.h sym-stubs.c *.P *.o
@@ -88,7 +89,7 @@ asm-constants.h: asm-constants.c
    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
    rm -f $*.d
 
-kernel.elf: kernel.ld asm-constants.h entry.o early-pages.o kernel.o printf.o
+kernel.elf: kernel.ld asm-constants.h entry.o early-pages.o early-mmu.S kernel.o printf.o
 	$(LINKER) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
 
 -include *.P

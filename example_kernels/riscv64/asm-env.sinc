@@ -6,7 +6,7 @@
  * Useful macros to code in assembly with clarity
  * and convenience.
  *
- * _Do_ use global_defun/defun/retfun and push/pop macros
+ * _Do_ use defun_global/defun/retfun and push/pop macros
  * in assembly that get called from other bits of asm,
  * unless you have a really good reason to. Writing
  * throw-away initialization functions is not a good
@@ -23,6 +23,24 @@
  * The efficiency aspect is overall irrelevant when it comes
  * to throw-away initialization code that is executed once.
  */
+
+/*
+ * Helps enforce correct usage of macros and their parameters,
+ * by catching invalid macro parameter values.
+ *
+ * What 'x' and 'y' are is pretty flexible, these can be
+ * references to macro params, can be registers or even values.
+ *
+ * E.g.:
+ * - macro_arg_is_not \level, 4, "level cannot be \level"
+ * - macro_arg_is_not \reg, a0, "reg cannot be a0"
+ * - macro_arg_is_not \a, \b, "a cannot be b"
+ */
+.macro macro_arg_is_not x, y, err
+   .if typeof_\x == typeof_\y
+      .error "\err"
+   .endif
+.endm
 
 /*
  * Begins a function.
@@ -81,16 +99,16 @@
  * Ensures the stack is 16 byte aligned.
  */
 .macro call_c sym
-   push reg=s1
-   push reg=t0
+   push s1
+   push t0
    mv   s1, sp
    andi t0, sp, 8
    beq  t0, zero, 1f
    addi sp, sp, -8
 1: call \sym
    mv   sp, s1
-   pop  reg=t0   
-   pop  reg=s1
+   pop  t0
+   pop  s1
 .endm
 
 /*
@@ -113,51 +131,71 @@
 
 /*
  * Print a \str.
- *
- * Clobbers: a0.
  */
 .macro debug_string str
-   la  a0, \str
-   jal sbi_putstring
+   push a0
+   la   a0, \str
+   jal  sbi_putstring
+   pop  a0
 .endm
 
 /*
  * Print a \str and a 64-bit hex value stored in \reg.
  *
- * \reg cannot be a0, a1, a2, a3, a6, a7.
- *
- * Clobbers: a0.
+ * This is written weirdly to allow reg to be a0.
  */
 .macro debug_string_reg str, reg
-   la  a0, \str
-   jal sbi_putstring
-   mv  a0, \reg
-   jal sbi_puthex64
+   push a0
+   la   a0, \str
+   jal  sbi_putstring
+   pop  a0
+   push a0
+   mv   a0, \reg
+   jal  sbi_puthex64
+   pop  a0
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value at the address
+ * specified by \reg.
+ *
+  * This is written weirdly to allow reg to be a0.
+ */
+.macro debug_string_dereg_val64 str, reg
+   push a0
+   la   a0, \str
+   jal  sbi_putstring
+   pop  a0
+   push a0
+   mv   a0, \reg
+   ld   a0, 0(a0)
+   jal  sbi_puthex64
+   pop  a0
 .endm
 
 /*
  * Print a \str and a 64-bit hex address of \sym.
- *
- * Clobbers: a0.
  */
 .macro debug_string_sym str, sym
-   la  a0, \str
-   jal sbi_putstring
-   la  a0, \sym
-   jal sbi_puthex64
+   push a0
+   la   a0, \str
+   jal  sbi_putstring
+   la   a0, \sym
+   jal  sbi_puthex64
+   pop  a0
 .endm
 
 /*
  * Print a \str and a 64-bit hex value stored at \sym.
- *
- * Clobbers: a0.
  */
 .macro debug_string_sym_val64 str, sym
-   la  a0, \str
-   jal sbi_putstring
-   la  a0, \sym
-   ld  a0, 0(a0)
-   jal sbi_puthex64
+   push a0
+   la   a0, \str
+   jal  sbi_putstring
+   la   a0, \sym
+   ld   a0, 0(a0)
+   jal  sbi_puthex64
+   pop  a0
 .endm
 #else
 /*
@@ -171,6 +209,9 @@
 .endm
 
 .macro debug_string_reg str, reg
+.endm
+
+.macro debug_string_dereg_val64 str, reg
 .endm
 
 .macro debug_string_sym str, sym

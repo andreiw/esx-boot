@@ -23,17 +23,16 @@ debug_asciz string_addend,      "\nAddend (link-load) = 0x"
 debug_asciz string_rela_start,  "\n_rela_start        = 0x"
 debug_asciz string_rela_end,    "\n_rela_end          = 0x"
 debug_asciz string_rela_offset, "\nr_offset = 0x"
-debug_asciz string_rela_info,   " r_info = 0x"
-debug_asciz string_rela_addend, " r_addend = 0x"
-debug_asciz string_rela_fixed,  " fixed -> 0x"
-debug_asciz string_rela_skipped," skipped?"
+debug_asciz string_rela_info,   "r_info = 0x"
+debug_asciz string_rela_addend, "r_addend = 0x"
+debug_asciz string_rela_fixed,  "fixed -> 0x"
+debug_asciz string_rela_skipped,"skipped?"
 debug_asciz string_stack,       "\nStack pointer      = 0x"
 debug_asciz string_go_c,        "\nCalling C...\n"
 debug_asciz string_bye,         "\nCalling shutdown...\n"
 string_panic: .asciz            "\nPanic RA=0x"
 
    .section .text
-
 /*
  * Entry point into the "kernel".
  *
@@ -109,26 +108,13 @@ relocs_done:
    mv   a0, t1
    call_c c_main
 
-   jal early_page_alloc
-   jal sbi_puthex64
-   jal early_page_alloc
-   jal sbi_puthex64
-   jal early_page_alloc
-   jal sbi_puthex64
-   jal early_page_alloc
-   jal sbi_puthex64
-   jal early_page_alloc
-   jal sbi_puthex64
-   jal early_page_alloc
-   jal sbi_puthex64
-
+   jal  mmu_init
 shutdown:
    call sbi_shutdown
 
 /*
  * Fatal error handling.
  *
- * Inputs: N/A.
  * Outputs: Doesn't return.
  * Clobbers: a0, a1.
  */
@@ -146,8 +132,6 @@ retfun
  *
  * Inputs:
  *    a0: Character to print.
- * Outputs: N/A.
- * Clobbers: Nothing.
  */
 defun_global sbi_putchar
    push a0
@@ -168,8 +152,6 @@ retfun
  *
  * Inputs:
  *    a0: ASCII string to print.
- * Outputs: N/A.
- * Clobbers: Nothing.
  */
 defun_global sbi_putstring
    push    a0
@@ -196,10 +178,8 @@ retfun
  *
  * Inputs:
  *    a0: Value to print.
- * Outputs: N/A.
- * Clobbers: Nothing.
  */
-defun sbi_puthex64
+defun_global sbi_puthex64
    push    a0
    push    a1
    push    a2
@@ -232,9 +212,8 @@ retfun
 /*
  * Shutdown the system.
  *
- * Inputs: N/A.
  * Outputs: Doesn't return.
- * Clobbers: a0 (on DEBUG=1), a6, a7.
+ * Clobbers: a6, a7.
  */
 sbi_shutdown:
    debug_string string_bye

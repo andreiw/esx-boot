@@ -5,18 +5,16 @@
 #include "asm-constants.h"
 #include "asm-env.sinc"
 
-        .section .data
+   .section .data
 early_pages_next: .long _early_pages_start
 
-        .section .rodata
-debug_asciz string_early_pages, "\nNo early pages!"
+   .section .rodata
+debug_asciz string_early_pages, "\nOut of early pages!"
 
-        .section .text
-
+   .section .text
 /*
  * Allocates an early page, if possible.
  *
- * Inputs: None.
  * Outputs:
  *    a0: VA of allocated page.
  * Clobbers: Modifies early_page_next. Panics if no allocation
