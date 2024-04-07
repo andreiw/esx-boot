@@ -40,7 +40,7 @@
 #include "kernel.h"
 #define simple_printf printf
 #define simple_sprintf sprintf
-#define simple_putchar sbi_putchar
+#define simple_putchar AABI_CALL(sbi_putchar, 1, 0)
 #endif
 
 static void simple_outputchar(char **str, char c)

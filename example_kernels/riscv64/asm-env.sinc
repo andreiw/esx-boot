@@ -5,23 +5,6 @@
 /*
  * Useful macros to code in assembly with clarity
  * and convenience.
- *
- * _Do_ use defun_global/defun/retfun and push/pop macros
- * in assembly that get called from other bits of asm,
- * unless you have a really good reason to. Writing
- * throw-away initialization functions is not a good
- * reason. Writing interrupt handlers or perf-sensitive
- * code may be.
- *
- * To simplify the mental tax, any function defined via
- * defun_global/defun must assume all registers are callee
- * saved. Any caller of a function defined via defun_global/
- * defun can thus skip saving _any_ register.
- *
- * The trade-off here is having less efficient code, yet
- * code that is robust in the face of long term maintainability.
- * The efficiency aspect is overall irrelevant when it comes
- * to throw-away initialization code that is executed once.
  */
 
 /*
@@ -43,62 +26,11 @@
 .endm
 
 /*
- * Begins a function.
- *
- * Function prologue just sets a frame pointer.
- */
-.macro defun name
-\name:
-   sd   ra, -8(sp)
-   sd   s0, -16(sp)
-   mv   s0, sp
-   addi sp, sp, -16
-.endm
-
-/*
- * Begins a globally-visible function.
- */
-.macro defun_global name
-   .global \name
-   defun name=\name
-.endm
-
-/*
- * Completes a function.
- *
- * Function epilogue only uses frame pointer to
- * restore state. I.e. it doesn't matter what SP
- * was.
- */
-.macro retfun
-   mv   sp, s0
-   ld   s0, -16(sp)
-   ld   ra, -8(sp)
-   ret
-.endm
-
-/*
- * Push \reg onto stack.
- */
-.macro push reg
-   addi sp, sp, -8
-   sd   \reg, 0(sp)
-.endm
-
-/*
- * Pop stack into \reg.
- */
-.macro pop reg
-   ld   \reg, 0(sp)
-   addi sp, sp, 8
-.endm
-
-/*
  * Call a C function.
  *
  * Ensures the stack is 16 byte aligned.
  */
-.macro call_c sym
+.macro cabi_call sym
    push s1
    push t0
    mv   s1, sp
@@ -113,11 +45,63 @@ m\@_0:
 .endm
 
 /*
+ * The "Asm ABI".
+ *
+ * This is like the RV ABI, except:
+ * - you can have more than 1 return value.
+ * - name mangling encodes the number of args and rets for
+ *   at least some eyeball/linker checks.
+ * - No requirement to align stack.
+ *
+ * Calls returning <= 2 rets are fully compatible
+ * with being called from C.
+ */
+.macro aabi_defun name, nargs, nrets
+aabi_\name\()_\nargs\()_\nrets\():
+   sd   ra, -8(sp)
+   sd   s0, -16(sp)
+   mv   s0, sp
+   addi sp, sp, -16
+.endm
+
+.macro aabi_defun_global name, nargs, nrets
+   .global aabi_\name\()_\nargs\()_\nrets\()
+   aabi_defun name=\name, nargs=\nargs, nrets=\nrets
+.endm
+
+.macro aabi_retfun
+   mv   sp, s0
+   ld   s0, -16(sp)
+   ld   ra, -8(sp)
+   ret
+.endm
+
+.macro aabi_call name, nargs, nrets
+   call aabi_\name\()_\nargs\()_\nrets
+.endm
+
+/*
+ * Push \reg onto stack.
+ */
+.macro push reg
+   addi sp, sp, -8
+   sd   \reg, 0(sp)
+.endm
+
+/*
+ * Pop stack into \reg.
+ */
+.macro pop reg=zero
+   ld   \reg, 0(sp)
+   addi sp, sp, 8
+.endm
+
+/*
  * Fatal error.
  */
 .macro fatal str
    debug_string \str
-   call panic
+   aabi_call name=panic, nargs=0, nrets=0
 .endm
 
 #ifdef DEBUG
@@ -136,7 +120,19 @@ m\@_0:
 .macro debug_string str
    push a0
    la   a0, \str
-   jal  sbi_putstring
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
+   pop  a0
+.endm
+
+/*
+ * Print a \str and a 64-bit hex value passed as an immediate.
+ */
+.macro debug_string_imm str, imm
+   push a0
+   la   a0, \str
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
+   li   a0, \imm
+   aabi_call sbi_puthex64, nargs=1, nrets=0
    pop  a0
 .endm
 
@@ -148,11 +144,11 @@ m\@_0:
 .macro debug_string_reg str, reg
    push a0
    la   a0, \str
-   jal  sbi_putstring
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
    pop  a0
    push a0
    mv   a0, \reg
-   jal  sbi_puthex64
+   aabi_call sbi_puthex64, nargs=1, nrets=0
    pop  a0
 .endm
 
@@ -165,12 +161,12 @@ m\@_0:
 .macro debug_string_dereg_val64 str, reg
    push a0
    la   a0, \str
-   jal  sbi_putstring
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
    pop  a0
    push a0
    mv   a0, \reg
    ld   a0, 0(a0)
-   jal  sbi_puthex64
+   aabi_call sbi_puthex64, nargs=1, nrets=0
    pop  a0
 .endm
 
@@ -180,9 +176,9 @@ m\@_0:
 .macro debug_string_sym str, sym
    push a0
    la   a0, \str
-   jal  sbi_putstring
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
    la   a0, \sym
-   jal  sbi_puthex64
+   aabi_call sbi_puthex64, nargs=1, nrets=0
    pop  a0
 .endm
 
@@ -192,10 +188,10 @@ m\@_0:
 .macro debug_string_sym_val64 str, sym
    push a0
    la   a0, \str
-   jal  sbi_putstring
+   aabi_call name=sbi_putstring, nargs=1, nrets=0
    la   a0, \sym
    ld   a0, 0(a0)
-   jal  sbi_puthex64
+   aabi_call sbi_puthex64, nargs=1, nrets=0
    pop  a0
 .endm
 #else

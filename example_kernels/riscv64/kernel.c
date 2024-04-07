@@ -48,7 +48,6 @@ const char *hello = "Hello via UART!\n";
 extern void some_missing_symbol (void);
 extern void another_missing_symbol (void);
 #endif /* WITH_BRING_UP_SYM_STUBS */
-extern void mmu_init (void);
 
 void
 c_main (ESXBootInfo *ebi)
@@ -96,6 +95,6 @@ c_main (ESXBootInfo *ebi)
     * Written in assembly because it's supposed to be called
     * before we go to C, but I don't have code to map the UART yet.
     */
-   mmu_init();
+   AABI_CALL(mmu_init, 0, 0)();
    printf ("\nMMU is enabled");
 }

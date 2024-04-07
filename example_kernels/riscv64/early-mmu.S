@@ -51,12 +51,11 @@
  * Output: \entry, filled page table entry.
  */
 .macro mmu_entry_new_tab entry_va, entry
-   macro_arg_is_not \entry, a0, "entry cannot be a0"
    macro_arg_is_not \entry, \entry_va, "entry cannot be entry_va"
-   push a0
-   jal  early_page_alloc
-   mv   \entry, a0
-   pop  a0
+   aabi_call name=early_page_alloc, nargs=0, nrets=1
+   .if \entry != a0
+      mv   \entry, a0
+   .endif
    srli \entry, \entry, PG_ENT_PPN_SHIFT
    ori  \entry, \entry, PG_ENT_VALID
    sd   \entry, (\entry_va)
@@ -150,75 +149,80 @@ debug_asciz string_satp          "\nSwitched SATP to 0x"
 debug_asciz string_no_satp       "\nUnsupported MMU"
 
    .section .text
-defun_global mmu_init
-   push a0
-   push a1
-   push a2
-   push a3
-   push a4
+
+/*
+ * Enable the MMU, mapping the kernel (only).
+ *
+ * Automatically detects Sv57, Sv48 and Sv39.
+ */
+aabi_defun_global name=mmu_init, nargs=0, nrets=0
+   push s11
+   push s10
+   push s9
+   push s8
    /*
-    * L5 (root) in a0.
+    * L5 (root) in s11.
     */
-   jal  early_page_alloc
-   la   a1, _start
-   la   a2, _end
+   aabi_call name=early_page_alloc, nargs=0, nrets=1
+   mv   s11, a0
    /*
     * Map the kernel between _start and _end using megapages,
     * with VA == PA.
     */
+   la   s10, _start
+   la   s9, _end
 map_megapage:
-   mv   a3, a0
-   debug_string_reg str=string_mapped1, reg=a1
-   mmu_va_2_tab tab_va=a3, va=a1, level=4, temp=a4, next_tab_va=a3
-   mmu_va_2_tab tab_va=a3, va=a1, level=3, temp=a4, next_tab_va=a3
-   mmu_va_2_tab tab_va=a3, va=a1, level=2, temp=a4, next_tab_va=a3
-   mmu_va_2_entry tab_va=a3, va=a1, level=1, temp=a4, entry_va=a3
-   mmu_map_mega entry_va=a3, ma=a1, temp=a4
-   debug_string_dereg_val64 str=string_mapped2, reg=a3
-   li   a4, PG_LEVEL1_SIZE
-   add  a1, a1, a4
-   blt  a1, a2, map_megapage
+   mv   s8, s11
+   debug_string_reg str=string_mapped1, reg=s10
+   mmu_va_2_tab tab_va=s8, va=s10, level=4, temp=a0, next_tab_va=s8
+   mmu_va_2_tab tab_va=s8, va=s10, level=3, temp=a0, next_tab_va=s8
+   mmu_va_2_tab tab_va=s8, va=s10, level=2, temp=a0, next_tab_va=s8
+   mmu_va_2_entry tab_va=s8, va=s10, level=1, temp=a0, entry_va=s8
+   mmu_map_mega entry_va=s8, ma=s10, temp=a0
+   debug_string_dereg_val64 str=string_mapped2, reg=s8
+   li   a0, PG_LEVEL1_SIZE
+   add  s10, s10, a0
+   blt  s10, s9, map_megapage
    /*
     * We don't know how many levels the CPU supports. So we probe.
     *
     * First, build up the SATP values.
     *
-    * a0 is the Sv57 (L4) root SATP value.
-    * a1 is the Sv48 (L3) root SATP value.
-    * a2 is the Sv39 (L2) root SATP value.
+    * s11 is the Sv57 (L4) root SATP value.
+    * s10 is the Sv48 (L3) root SATP value.
+    * s9 is the Sv39 (L2) root SATP value.
     */
-   srli a0, a0, PG_BASE_SHIFT
-   addi a1, a0, 1
-   addi a2, a1, 1
-   li   a3, SATP_SV57
-   or   a0, a0, a3
-   li   a3, SATP_SV48
-   or   a1, a1, a3
-   li   a3, SATP_SV39
-   or   a2, a2, a3
-   debug_string_reg str=string_satp57, reg=a0
-   debug_string_reg str=string_satp48, reg=a1
-   debug_string_reg str=string_satp39, reg=a2
+   srli s11, s11, PG_BASE_SHIFT
+   addi s10, s11, 1
+   addi s9, s10, 1
+   li   a0, SATP_SV57
+   or   s11, s11, a0
+   li   a0, SATP_SV48
+   or   s10, s10, a0
+   li   a0, SATP_SV39
+   or   s9, s9, a0
+   debug_string_reg str=string_satp57, reg=s11
+   debug_string_reg str=string_satp48, reg=s10
+   debug_string_reg str=string_satp39, reg=s9
    /*
     * Try setting SATP. If the value doesn't stick, try the
     * next value.
     */
-   csrw satp, a0
-   csrr a4, satp
-   beq  a4, a0, done
-   csrw satp, a1
-   csrr a4, satp
-   beq  a4, a1, done
-   csrw satp, a2
-   csrr a4, satp
-   beq  a4, a2, done
+   csrw satp, s11
+   csrr a0, satp
+   beq  a0, s11, done
+   csrw satp, s10
+   csrr a0, satp
+   beq  a0, s10, done
+   csrw satp, s9
+   csrr a0, satp
+   beq  a0, s9, done
    fatal string_no_satp
 done:
    sfence.vma
-   debug_string_reg str=string_satp, reg=a4
-   pop a4
-   pop a3
-   pop a2
-   pop a1
-   pop a0
-retfun
+   debug_string_reg str=string_satp, reg=a0
+   pop s8
+   pop s9
+   pop s10
+   pop s11
+aabi_retfun

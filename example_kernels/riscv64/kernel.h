@@ -4,7 +4,13 @@
 
 #pragma once
 
+#include <assert.h>
 #include <inttypes.h>
+
+#define DECLARE_AABI_CALL(ret_type, name, nargs, nrets) \
+  static_assert(nrets <= 2, "aabi call " #name " returns too much"); \
+  ret_type aabi_##name##_##nargs##_##nrets
+#define AABI_CALL(name, nargs, nrets) aabi_##name##_##nargs##_##nrets
 
 #define LINK_ADDRESS 0x80300000UL
 #define STACK_PAGES  1
@@ -75,7 +81,6 @@ typedef struct elf64_rela {
 #define PG_ENT_WRITE               (1UL << 2)
 #define PG_ENT_EXECUTE             (1UL << 3)
 
-void sbi_putchar(char ch);
+DECLARE_AABI_CALL(void, sbi_putchar, 1, 0)(char ch);
+DECLARE_AABI_CALL(void, mmu_init, 0, 0)(void);
 int printf(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
-
-

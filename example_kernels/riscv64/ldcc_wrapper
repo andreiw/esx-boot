@@ -21,7 +21,7 @@ call_compiler $@
 if echo "$output" | grep -q "undefined reference to"; then
    echo Stubbing out missing symbols...
    echo "#include <kernel.h>" > sym-stubs.c
-   echo "$output" | gawk 'match($0, /undefined reference to `(.*)\047/, a) {print "void " a[1] "(void) { printf(\"Missing symbol: " a[1] "\134n\"); }"}' >> sym-stubs.c
+   echo "$output" | gawk 'match($0, /undefined reference to `(.*)\047/, a) {print "void " a[1] "(void) { printf(\"Missing symbol: " a[1] "\134n\"); }"}' | sort | uniq >> sym-stubs.c
    call_compiler $@ sym-stubs.c
    exit_if_done
 fi
