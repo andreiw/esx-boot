@@ -4,6 +4,7 @@
 
 #include "asm-constants.h"
 #include "asm-env.sinc"
+#include "asm-aabi-decls.sinc"
 
    .section .rodata
 string_bye:   .asciz            "\nCalling shutdown...\n"

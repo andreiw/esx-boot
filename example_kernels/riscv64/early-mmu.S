@@ -4,6 +4,7 @@
 
 #include "asm-constants.h"
 #include "asm-env.sinc"
+#include "asm-aabi-decls.sinc"
 
 /*
  * Necessary as C processor statements in asm-constants.h

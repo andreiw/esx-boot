@@ -56,6 +56,13 @@ m\@_0:
  * Calls returning <= 2 rets are fully compatible
  * with being called from C.
  */
+
+
+.macro aabi_decl name, nargs, nrets
+.global  aabi_decl_\name\()_\nargs\()_\nrets\()
+.equiv aabi_decl_\name\()_\nargs\()_\nrets\(),((\nargs << 8) | (\nrets))
+.endm
+
 .macro aabi_defun name, nargs, nrets
 aabi_\name\()_\nargs\()_\nrets\():
    sd   ra, -8(sp)
@@ -65,6 +72,9 @@ aabi_\name\()_\nargs\()_\nrets\():
 .endm
 
 .macro aabi_defun_global name, nargs, nrets
+   .if aabi_decl_\name\()_\nargs\()_\nrets\() != ((\nargs << 8) | (\nrets))
+      .error "AABI defun of \name doesn't match decl"
+   .endif
    .global aabi_\name\()_\nargs\()_\nrets\()
    aabi_defun name=\name, nargs=\nargs, nrets=\nrets
 .endm
@@ -77,6 +87,9 @@ aabi_\name\()_\nargs\()_\nrets\():
 .endm
 
 .macro aabi_call name, nargs, nrets
+   .if aabi_decl_\name\()_\nargs\()_\nrets\() != ((\nargs << 8) | (\nrets))
+      .error "AABI call to \name doesn't match decl"
+   .endif
    call aabi_\name\()_\nargs\()_\nrets
 .endm
 

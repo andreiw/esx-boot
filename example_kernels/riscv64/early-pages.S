@@ -4,6 +4,7 @@
 
 #include "asm-constants.h"
 #include "asm-env.sinc"
+#include "asm-aabi-decls.sinc"
 
    .section .data
 early_pages_next: .long _early_pages_start

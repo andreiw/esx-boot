@@ -1,0 +1,23 @@
+/*
+ * early-mmu.S
+ */
+aabi_decl name=mmu_init nargs=0 nrets=0
+/*
+ * early-pages.S
+ */
+aabi_decl name=early_page_alloc nargs=0 nrets=1
+/*
+ * early-relocs.S
+ */
+aabi_decl name=relocs_run nargs=1 nrets=0
+/*
+ * entry.S
+ */
+aabi_decl name=panic nargs=0 nrets=0
+/*
+ * sbi.S
+ */
+aabi_decl name=sbi_putchar nargs=1 nrets=0
+aabi_decl name=sbi_putstring nargs=1 nrets=0
+aabi_decl name=sbi_puthex64 nargs=1 nrets=0
+aabi_decl name=sbi_shutdown nargs=0 nrets=0
