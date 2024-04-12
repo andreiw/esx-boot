@@ -8,7 +8,9 @@
 #include "kernel.h"
 #include "../../include/esxbootinfo.h"
 
-#define C(str, constant) asm volatile ("#define " str " %0\n\r" :: "i" ((uintptr_t)constant) :)
+#define C(str, constant) \
+   asm volatile ("#define " str " %0\n\r" :: "i" ((uintptr_t)constant) :); \
+   asm volatile (".equ " str ", %0\n\r" :: "i" ((uintptr_t)constant) :)
 
 #define IDENTIFIER(x) C(#x, x)
 #define SIZEOF(x) C("SZ_" #x, sizeof(x))

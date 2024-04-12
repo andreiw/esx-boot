@@ -7,16 +7,6 @@
 #include "asm-aabi-decls.sinc"
 
 /*
- * Necessary as C processor statements in asm-constants.h
- * are applied *before* 'as' macros are evaluated.
- */
-.equ PLS0, PG_LEVEL0_SHIFT
-.equ PLS1, PG_LEVEL1_SHIFT
-.equ PLS2, PG_LEVEL2_SHIFT
-.equ PLS3, PG_LEVEL3_SHIFT
-.equ PLS4, PG_LEVEL4_SHIFT
-
-/*
  * Given a page table of \level, compute the address
  * of the page table entry corresponding to \va.
  *
@@ -31,7 +21,7 @@
  */
 .macro mmu_va_2_entry tab_va, va, level, temp, entry_va
    macro_arg_is_not \tab_va, \temp, "tab_va cannot be temp"
-   srli \temp, \va, PLS\level
+   srli \temp, \va, PG_LEVEL\level\()_SHIFT
    /*
     * Compute entry index within \tab_ve.
     */

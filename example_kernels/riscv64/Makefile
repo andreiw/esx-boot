@@ -38,6 +38,7 @@ endif
 ECHO = @echo
 CC =  riscv64-linux-gnu-gcc
 CFLAGS  += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic -I./ $(BUILD_FLAGS)
+ASFLAGS = $(CFLAGS) -D__ASSEMBLER__
 LINKER = $(CC)
 ifeq ($(WITH_BRING_UP_SYM_STUBS), 1)
 	LINKER=./ldcc_wrapper $(CC)
@@ -67,9 +68,14 @@ kernel.ld: kernel.lds
 	$(CC) -xc -E -P $(CFLAGS) -o $@ $<
 
 asm-constants.h: asm-constants.c
-	$(CC) -MD $(CFLAGS) -S $< -o $@
-	grep \#define $@ > $@.h
-	mv $@.h $@
+	$(CC) -MD $(CFLAGS) -S $< -o $@.p1
+	$(ECHO) \#ifndef __ASSEMBLER__ > $@.p2
+	grep \#define $@.p1 >> $@.p2
+	$(ECHO) \#else >> $@.p2
+	grep equ $@.p1 >> $@.p2
+	$(ECHO) \#endif >> $@.p2
+	mv $@.p2 $@
+	rm -f $@.p1
 	cp $*.d $*.P; \
    sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
@@ -83,13 +89,13 @@ asm-constants.h: asm-constants.c
    rm -f $*.d
 
 %.o: %.S
-	$(CC) -MD $(CFLAGS) $< -c -o $@
+	$(CC) -MD $(ASFLAGS) $< -c -o $@
 	cp $*.d $*.P; \
    sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
    rm -f $*.d
 
-kernel.elf: kernel.ld asm-constants.h entry.o early-ebi.o early-relocs.o early-pages.o early-mmu.S kernel.o printf.o sbi.o
+kernel.elf: kernel.ld asm-constants.h entry.o early-ebi.o early-relocs.o early-pages.o early-mmu.o kernel.o printf.o sbi.o
 	$(LINKER) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
 
 -include *.P
