@@ -44,6 +44,32 @@ m\@_0:
    pop  s1
 .endm
 
+.macro l_asmc_field dest, name, base
+   .if SZ_\name == 8
+       ld  \dest, OF_\name(\base)
+   .elseif IU_\name
+      .if SZ_\name == 4
+         lwu  \dest, OF_\name(\base)
+      .elseif SZ_\name == 2
+         lhu  \dest, OF_\name(\base)
+      .elseif SZ_\name == 1
+         lbu  \dest, OF_\name(\base)
+      .else
+         .error "unsupported unsigned load for \name (size SZ_\name)"
+     .endif
+   .else
+      .if SZ_\name == 4
+         lw  \dest, OF_\name(\base)
+      .elseif SZ_\name == 2
+         lh  \dest, OF_\name(\base)
+      .elseif SZ_\name == 1
+         lb  \dest, OF_\name(\base)
+      .else
+         .error "unsupported signed load for \name (size SZ_\name)"
+     .endif
+   .endif
+.endm
+
 /*
  * The "Asm ABI".
  *

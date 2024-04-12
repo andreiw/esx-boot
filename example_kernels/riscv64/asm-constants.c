@@ -12,9 +12,20 @@
    asm volatile ("#define " str " %0\n\r" :: "i" ((uintptr_t)constant) :); \
    asm volatile (".equ " str ", %0\n\r" :: "i" ((uintptr_t)constant) :)
 
+#define IS_TYPE_UNSIGNED(type) ((type)0 - 1 > 0)
+
 #define IDENTIFIER(x) C(#x, x)
-#define SIZEOF(x) C("SZ_" #x, sizeof(x))
-#define OFFSETOF(s, f) C("OF_" #s "_" #f, offsetof(s, f))
+#define SIZE(x) C("SZ_" #x, sizeof(x))
+#define FIELD_SIZE(t, f) C("SZ_" #t "_" #f, sizeof(((t *) 0)->f))
+#define FIELD_OFFSET(t, f) C("OF_" #t "_" #f, offsetof(t, f))
+/*
+ * For a field in a struct, define the size, offset and signedness.
+ * The latter is helpful in as macros to simplify loading correctly.
+ */
+#define FIELD(t, f) \
+   FIELD_SIZE(t, f); \
+   FIELD_OFFSET(t, f); \
+   C("IU_" #t "_" #f, IS_TYPE_UNSIGNED(typeof(((t *) 0)->f)))
 
 void dummy (void)
 {
@@ -23,18 +34,18 @@ void dummy (void)
   IDENTIFIER(EARLY_PAGES);
 
   IDENTIFIER(R_RISCV_RELATIVE);
-  SIZEOF(elf64_rela);
-  OFFSETOF(elf64_rela, r_offset);
-  OFFSETOF(elf64_rela, r_info);
-  OFFSETOF(elf64_rela, r_addend);
+  SIZE(elf64_rela);
+  FIELD(elf64_rela, r_offset);
+  FIELD(elf64_rela, r_info);
+  FIELD(elf64_rela, r_addend);
 
-  OFFSETOF(ESXBootInfo, numESXBootInfoElmt);
-  OFFSETOF(ESXBootInfo, elmts);
-  OFFSETOF(ESXBootInfo_Elmt, type);
-  OFFSETOF(ESXBootInfo_Elmt, elmtSize);
+  FIELD(ESXBootInfo, numESXBootInfoElmt);
+  FIELD_OFFSET(ESXBootInfo, elmts);
+  FIELD(ESXBootInfo_Elmt, type);
+  FIELD(ESXBootInfo_Elmt, elmtSize);
   IDENTIFIER(ESXBOOTINFO_SERIAL_CON_TYPE);
-  OFFSETOF(ESXBootInfo_SerialCon, base);
-  OFFSETOF(ESXBootInfo_SerialCon, space);
+  FIELD(ESXBootInfo_SerialCon, base);
+  FIELD(ESXBootInfo_SerialCon, space);
   IDENTIFIER(ESXBOOTINFO_SERIAL_CON_SPACE_MMIO);
 
   IDENTIFIER(SATP_SV39);

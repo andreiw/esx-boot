@@ -16,7 +16,7 @@
  * Outputs: address of matching ESXBootInfo_Elmt or 0.
  */
 aabi_defun_global name=ebi_find, nargs=2, nrets=1
-   ld   t0, OF_ESXBootInfo_numESXBootInfoElmt(a0)
+   l_asmc_field dest=t0, name=ESXBootInfo_numESXBootInfoElmt, base=a0
    addi t1, a0, OF_ESXBootInfo_elmts
    mv   a0, zero
 1: /*
@@ -27,13 +27,13 @@ aabi_defun_global name=ebi_find, nargs=2, nrets=1
     * There is at least another element remaining, pointed
     * to by t1.
     */
-   lw   t2, OF_ESXBootInfo_Elmt_type(t1)
+   l_asmc_field dest=t2, name=ESXBootInfo_Elmt_type, base=t1
    beq  t2, a1, 2f
    /*
     * Type of element doesn't match, skip this element
     * and go to the next one.
     */
-   ld   t2, OF_ESXBootInfo_Elmt_elmtSize(t1)
+   l_asmc_field dest=t2, name=ESXBootInfo_Elmt_elmtSize, base=t1
    add  t1, t1, t2
    addi t0, t0, -1
    j    1b

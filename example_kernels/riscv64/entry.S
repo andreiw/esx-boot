@@ -78,13 +78,13 @@ entry:
    /*
     * Found ESXBootInfo_SerialCon.
     */
-   lw   t0, OF_ESXBootInfo_SerialCon_space(a0)
+   l_asmc_field dest=t0, name=ESXBootInfo_SerialCon_space, base=a0
    li   t1, ESXBOOTINFO_SERIAL_CON_SPACE_MMIO
    bne  t0, t1, 1f
    /*
     * It's an MMIO one.
     */
-   ld   a0, OF_ESXBootInfo_SerialCon_base(a0)
+   l_asmc_field dest=a0, name=ESXBootInfo_SerialCon_base, base=a0
    debug_string_reg str=string_uart_base, reg=a0
 1:
 

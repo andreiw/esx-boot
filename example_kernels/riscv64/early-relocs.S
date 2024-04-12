@@ -39,9 +39,9 @@ aabi_defun_global name=relocs_run, nargs=1, nrets=0
    la   t0, _rela_start
    la   t1, _rela_end
 1: beq  t0, t1, relocs_done
-   ld   t2, OF_elf64_rela_r_offset(t0)
-   ld   t3, OF_elf64_rela_r_info(t0)
-   ld   t4, OF_elf64_rela_r_addend(t0)
+   l_asmc_field dest=t2, name=elf64_rela_r_offset, base=t0
+   l_asmc_field dest=t3, name=elf64_rela_r_info, base=t0
+   l_asmc_field dest=t4, name=elf64_rela_r_addend, base=t0
    debug_string_reg str=string_rela_offset, reg=t2
    debug_string_reg str=string_rela_info,   reg=t3
    debug_string_reg str=string_rela_addend, reg=t4
