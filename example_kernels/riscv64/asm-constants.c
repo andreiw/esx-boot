@@ -26,6 +26,15 @@ void dummy (void)
   OFFSETOF(elf64_rela, r_info);
   OFFSETOF(elf64_rela, r_addend);
 
+  OFFSETOF(ESXBootInfo, numESXBootInfoElmt);
+  OFFSETOF(ESXBootInfo, elmts);
+  OFFSETOF(ESXBootInfo_Elmt, type);
+  OFFSETOF(ESXBootInfo_Elmt, elmtSize);
+  IDENTIFIER(ESXBOOTINFO_SERIAL_CON_TYPE);
+  OFFSETOF(ESXBootInfo_SerialCon, base);
+  OFFSETOF(ESXBootInfo_SerialCon, space);
+  IDENTIFIER(ESXBOOTINFO_SERIAL_CON_SPACE_MMIO);
+
   IDENTIFIER(SATP_SV39);
   IDENTIFIER(SATP_SV48);
   IDENTIFIER(SATP_SV57);

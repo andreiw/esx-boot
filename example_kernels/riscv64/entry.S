@@ -12,6 +12,7 @@ debug_asciz string_ebi,         "\nESXBootInfo struct = 0x"
 debug_asciz string_link_va,     "\nLink VA            = 0x"
 debug_asciz string_load_va,     "\nLoad VA            = 0x"
 debug_asciz string_stack,       "\nStack pointer      = 0x"
+debug_asciz string_uart_base    "\nMMIO UART          = 0x"
 debug_asciz string_go_c,        "\nCalling C...\n"
 string_panic: .asciz            "\nPanic RA=0x"
 
@@ -65,6 +66,27 @@ entry:
    addi t0, t0, 1
    j    1b
 2:
+
+/*
+ * Example of locating an EBI structure, in this case
+ * the UART described by ESXBootInfo_SerialCon.
+ */
+   mv   a0, s10
+   li   a1, ESXBOOTINFO_SERIAL_CON_TYPE
+   aabi_call name=ebi_find, nargs=2, nrets=1
+   beqz a0, 1f
+   /*
+    * Found ESXBootInfo_SerialCon.
+    */
+   lw   t0, OF_ESXBootInfo_SerialCon_space(a0)
+   li   t1, ESXBOOTINFO_SERIAL_CON_SPACE_MMIO
+   bne  t0, t1, 1f
+   /*
+    * It's an MMIO one.
+    */
+   ld   a0, OF_ESXBootInfo_SerialCon_base(a0)
+   debug_string_reg str=string_uart_base, reg=a0
+1:
 
 /*
  * Call C.
