@@ -391,6 +391,7 @@ typedef enum ESXBootInfo_SerialConType {
 } ESXBootInfo_SerialConType;
 
 typedef enum ESXBootInfo_SerialConSpace {
+   ESXBOOTINFO_SERIAL_CON_SPACE_NONE,
    ESXBOOTINFO_SERIAL_CON_SPACE_IO_PORT,
    ESXBOOTINFO_SERIAL_CON_SPACE_MMIO,
 } ESXBootInfo_SerialConSpace;
