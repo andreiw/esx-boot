@@ -7,7 +7,7 @@
 #include "kernel.h"
 #include "../../include/esxbootinfo.h"
 
-#define EBH_FEATS 2
+#define EBH_FEATS 3
 #define EBH_MAGIC ((uint32_t) (-(ESXBOOTINFO_MAGIC_V2 + sizeof (ebh) + EBH_FEATS)))
 /*
  * 2MiB (megapage) alignment.
@@ -18,6 +18,7 @@ struct ebh_s {
   ESXBootInfo_Header_V2 header;
   ESXBootInfo_FeatSerialCon feat_serial_con;
   ESXBootInfo_FeatLoadAlign feat_load_align;
+  ESXBootInfo_FeatCpuMode   feat_cpu_mode;
 } __attribute__((packed));
 
 __attribute__((section(".text.ebi,\"a\"#")))
@@ -39,6 +40,11 @@ struct ebh_s ebh = {
       ESXBOOTINFO_FEAT_REQUIRED,
       sizeof (ESXBootInfo_FeatLoadAlign),
       LOAD_ALIGNMENT
+   },
+   {
+      ESXBOOTINFO_FEAT_CPU_MODE_TYPE,
+      ESXBOOTINFO_FEAT_REQUIRED,
+      sizeof (ESXBootInfo_FeatCpuMode)
    }
 };
 
@@ -72,6 +78,11 @@ c_main (ESXBootInfo *ebi)
       case ESXBOOTINFO_EFI_TYPE: {
          ESXBootInfo_Efi *efi = (void *) elmt;
          printf ("UEFI System Table at 0x%lx\n", efi->efi_systab);
+         break;
+      }
+      case ESXBOOTINFO_CPU_MODE_TYPE: {
+         ESXBootInfo_CpuMode *cpu = (void *) elmt;
+         printf ("Hart ID 0x%lx\n", cpu->hart_id);
          break;
       }
       default:

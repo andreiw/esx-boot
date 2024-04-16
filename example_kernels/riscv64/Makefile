@@ -37,7 +37,8 @@ endif
 
 ECHO = @echo
 CC =  riscv64-linux-gnu-gcc
-CFLAGS  += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic -I./ $(BUILD_FLAGS)
+HFLAGS += -I./ -Donly_riscv64 $(BUILD_FLAGS)
+CFLAGS += -Os -Wall -Werror -fno-common -mcmodel=medany -ffreestanding -march=rv64gc -fno-pie -fno-pic $(HFLAGS)
 ASFLAGS = $(CFLAGS) -D__ASSEMBLER__
 LINKER = $(CC)
 ifeq ($(WITH_BRING_UP_SYM_STUBS), 1)
