@@ -809,6 +809,13 @@ static int esxbootinfo_set_cpu_mode(void)
 #if defined(only_riscv64)
    cpu->hart_id = RiscVBootHartId;
 #endif /* only_riscv64 */
+#if defined(only_riscv64) || defined(only_x86)
+   /*
+    * mboot _always_ hands off with VA == PA, but other
+    * bootloaders may do something different.
+    */
+   cpu->pa_2_va_addend = 0;
+#endif /* only_riscv64 || only_x86 */
 
    eb_advance_next_elmt();
    return ERR_SUCCESS;

@@ -431,6 +431,14 @@ typedef struct ESXBootInfo_CpuMode {
 #if defined(only_riscv64)
    uint64_t hart_id;
 #endif /* only_riscv64 */
+#if defined(only_riscv64) || defined(only_x86)
+   /*
+    * Not required on AArch64 due to presence of AT*
+    * instructions, by which code can trivially
+    * deduce its physical location.
+    */
+   uint64_t pa_2_va_addend;
+#endif /* only_riscv64 || only_x86 */
 } __attribute__((packed)) ESXBootInfo_CpuMode;
 
 /*
@@ -438,18 +446,18 @@ typedef struct ESXBootInfo_CpuMode {
  *
  * x86/x64:
  *  EAX: ESXBootInfo magic.
- *  EBX: PA of ESXBootInfo data structure.
+ *  EBX: Address of ESXBootInfo data structure.
  *  State: 32-bit unpaged mode. See mboot/x86/trampoline.s
  *         for details.
  *
  * ARM64:
  *  x0: ESXBootInfo magic.
- *  x1: PA of ESXBootInfo data structure.
+ *  x1: Address of ESXBootInfo data structure.
  *  State: MMU and caches may be on.
  *
  * RISCV64:
  *  a0: ESXBootInfo magic.
- *  a1: PA of ESXBootInfo data structure.
+ *  a1: Address of ESXBootInfo data structure.
  *  State: MMU and caches may be on.
  *
  * The magic value reported matches the magic of the ESXBootInfo
@@ -459,15 +467,26 @@ typedef struct ESXBootInfo_CpuMode {
  * ESXBootInfo header.
  *
  * Version ESXBOOTINFO_MAGIC_V1:
- *  x86/x64: loaded at linked address.
- *  ARM64/RISCV64: loaded at any 2MB-aligned address.
+ *  - x86/x64: loaded at linked address.
+ *  - ARM64: loaded at any 2MB-aligned address, VA possibly != PA.
+ *  - RISCV64: loaded at any 2MB-aligned address, VA == PA.
+ *  - ESXBootInfo address: PA (physical address).
  *
  * Version ESXBOOTINFO_MAGIC_V2:
- *  FEAT_LOAD_ALIGN missing: loaded at linked address.
- *  FEAT_LOAD_ALIGN load_align == 0: loaded at linked address.
- *  FEAT_LOAD_ALIGN load_align != 0: loaded at load_align-aligned
- *                                   address. On x86/x64, this
- *                                   address is below 4GiB.
+ *  - FEAT_LOAD_ALIGN missing: loaded at linked address.
+ *  - FEAT_LOAD_ALIGN load_align == 0: loaded at linked address.
+ *  - FEAT_LOAD_ALIGN load_align != 0: loaded at load_align-aligned
+ *                                     address. On x86/x64, this
+ *                                     address is below 4GiB.
+ *  - ESXBootInfo address: VA (virtual address).
+ *  - If MMU enabled:
+ *    - If VA != PA, VA = PA + addend, where:
+ *      - ARM64: addend is identified via AT* instruction using
+ *               kernel entry VA.
+ *      - RISCV64: addend is ESXBootInfo_CpuMode::pa_2_va_addend.
+ *    - ESXBootInfo structure is mapped. Addresses embedded in the
+ *      EBI structures don't have to be mapped, but the elmts[] array
+ *      should be traversable without fault.
  *
  * The ESXBootInfo data structure is used by the the boot loader
  * to communicate vital information to the operating system.
@@ -480,6 +499,8 @@ typedef struct ESXBootInfo_CpuMode {
  * of the memory reserved for the kernel and boot modules, of course).
  * It is the operating system's responsibility to avoid overwriting
  * this memory until it is done using it.
+ *
+ * All addresses embedded in the EBI structures are PAs.
  */
 
 typedef struct ESXBootInfo {

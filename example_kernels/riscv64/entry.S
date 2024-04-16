@@ -20,11 +20,21 @@ string_panic: .asciz            "\nPanic RA=0x"
 /*
  * Entry point into the "kernel".
  *
- * MMU may be on (with VA == PA).
+ * Loaded anywhere that's aligned to the expose FEAT_LOAD_ALIGN
+ * (see kernel.c) - _NOT_ at the linked address.
+ *
+ * MMU may be on, in which case VA may != PA, but
+ * mboot always hands off with VA == PA.
+ *
+ * If MMU enabled:
+ *  - If VA != PA, VA = PA + ESXBootInfo_CpuMode::pa_2_va_addend.
+ *  - ESXBootInfo structure is mapped. Addresses embedded in the
+ *    EBI structrs don't have to be mapped, but the elmts[] array
+ *    should be traversable without fault.
  *
  * Inputs:
  *    a0: ESXBOOTINFO_MAGIC_V2
- *    a1: physical address of the ESXBootInfo structure.
+ *    a1: virtual address of the ESXBootInfo structure.
  */
    .global entry
 entry:
