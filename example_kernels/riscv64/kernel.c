@@ -90,22 +90,14 @@ c_main (ESXBootInfo *ebi)
    } FOR_EACH_ESXBOOTINFO_ELMT_DONE(ebi, elmt);
    printf ("Command line: %s\n", (char *) ebi->cmdline);
 
-   if (uart_base != NULL) {
-      while (*hello != '\0') {
-         *uart_base = *hello++;
-      }
-   }
-
 #ifdef WITH_BRING_UP_SYM_STUBS
    some_missing_symbol ();
    another_missing_symbol ();
 #endif /* WITH_BRING_UP_SYM_STUBS */
 
-   printf ("Going to enable the MMU");
-   /*
-    * Written in assembly because it's supposed to be called
-    * before we go to C, but I don't have code to map the UART yet.
-    */
-   AABI_CALL(mmu_init, 0, 0)();
-   printf ("\nMMU is enabled");
+   if (uart_base != NULL) {
+      while (*hello != '\0') {
+         *uart_base = *hello++;
+      }
+   }
 }

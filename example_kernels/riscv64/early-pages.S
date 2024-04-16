@@ -7,6 +7,7 @@
 #include "asm-aabi-decls.sinc"
 
    .section .data
+   .align 8
 early_pages_next: .long _early_pages_start
 
    .section .rodata

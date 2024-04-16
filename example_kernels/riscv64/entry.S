@@ -7,12 +7,12 @@
 #include "asm-aabi-decls.sinc"
 
    .section .rodata
-debug_asciz string_magic,       "\nESXBootInfo magic  = 0x"
+debug_asciz string_magic,       "\nESXBootInfo magic = 0x"
 debug_asciz string_ebi,         "\nESXBootInfo struct = 0x"
-debug_asciz string_link_va,     "\nLink VA            = 0x"
-debug_asciz string_load_va,     "\nLoad VA            = 0x"
-debug_asciz string_stack,       "\nStack pointer      = 0x"
-debug_asciz string_uart_base    "\nMMIO UART          = 0x"
+debug_asciz string_link_va,     "\nLink VA = 0x"
+debug_asciz string_load_va,     "\nLoad VA = 0x"
+debug_asciz string_stack,       "\nStack pointer = 0x"
+debug_asciz string_uart_base    "\nMMIO UART = 0x"
 debug_asciz string_go_c,        "\nCalling C...\n"
 string_panic: .asciz            "\nPanic RA=0x"
 
@@ -78,6 +78,11 @@ entry:
 2:
 
 /*
+ * Initialize MMU with identity mapping of the kernel.
+ */
+  aabi_call name=mmu_init, nargs=0, nrets=0
+
+/*
  * Example of locating an EBI structure, in this case
  * the UART described by ESXBootInfo_SerialCon.
  */
@@ -92,10 +97,11 @@ entry:
    li   t1, ESXBOOTINFO_SERIAL_CON_SPACE_MMIO
    bne  t0, t1, 1f
    /*
-    * It's an MMIO one.
+    * It's an MMIO one - map it identity.
     */
    l_asmc_field dest=a0, name=ESXBootInfo_SerialCon_base, base=a0
    debug_string_reg str=string_uart_base, reg=a0
+   aabi_call name=mmu_map_device, nargs=1, nrets=0
 1:
 
 /*

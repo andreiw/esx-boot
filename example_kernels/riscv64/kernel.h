@@ -15,12 +15,15 @@
 #define LINK_ADDRESS 0x80300000UL
 #define STACK_PAGES  1
 /*
- * Mapping the kernel itself using 2MB megapage. Assume
- * 1 us enough for now. We could be using up to five
+ * Mapping the kernel itself using 2MB megapages. Assume
+ * 1 megapage is enough for now. We could be using up to five
  * page table levels (we won't know until we try
  * enabling!).
+ *
+ * Also map the UART using a 4K page. This could eat another 4
+ * pages (worst case).
  */
-#define EARLY_PAGES  4
+#define EARLY_PAGES  (4 + 4)
 
 #define R_RISCV_RELATIVE 0x3
 typedef struct elf64_rela {
@@ -82,5 +85,4 @@ typedef struct elf64_rela {
 #define PG_ENT_EXECUTE             (1UL << 3)
 
 DECLARE_AABI_CALL(void, sbi_putchar, 1, 0)(char ch);
-DECLARE_AABI_CALL(void, mmu_init, 0, 0)(void);
 int printf(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));

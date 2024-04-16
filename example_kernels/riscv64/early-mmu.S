@@ -6,6 +6,10 @@
 #include "asm-env.sinc"
 #include "asm-aabi-decls.sinc"
 
+   .section .data
+   .align 8
+mmu_root: .long 0
+
 /*
  * Given a page table of \level, compute the address
  * of the page table entry corresponding to \va.
@@ -43,10 +47,14 @@
  */
 .macro mmu_entry_new_tab entry_va, entry
    macro_arg_is_not \entry, \entry_va, "entry cannot be entry_va"
+   .if \entry != a0
+      push a0
+   .endif
    aabi_call name=early_page_alloc, nargs=0, nrets=1
    .if \entry != a0
       mv   \entry, a0
-   .endif
+      pop a0
+    .endif
    srli \entry, \entry, PG_ENT_PPN_SHIFT
    ori  \entry, \entry, PG_ENT_VALID
    sd   \entry, (\entry_va)
@@ -104,33 +112,55 @@ m\@_0:
 .endm
 
 /*
- * Given an L1 page table entry, fill it with an RWX
- * mapping for \ma.
+ * Given an Lx page table entry, fill it with a mapping for \ma.
  *
  * Inputs:
- *    \entry_va: Register containing L1 page table VA.
+ *    \entry_va: Register containing L\level page table VA.
  *    \ma:       Register containing 2MiB-aligned MA.
+ *    \level:    Immediate between 0 and 4.
+ *    \r:        Non-zero immediate if PG_ENT_READ is desired.
+ *    \w:        Non-zero immediate if PG_ENT_WRITE is desired.
+ *    \x:        Non-zero immediate if PG_ENT_EXECUTE is desired.
  * Clobbers: \temp, scratch register.
  */
-.macro mmu_map_mega entry_va, ma, temp
+.macro mmu_map_entry entry_va, ma, temp, level, r, w, x
    macro_arg_is_not \temp, \entry_va, "temp cannot be entry_va"
    macro_arg_is_not \temp, \ma, "temp cannot be ma"
 #ifdef DEBUG
-   li   \temp, PG_LEVEL1_MASK
-   and  \temp, \temp, \ma
-   beqz \temp, m\@_0
+  /*
+   * Check alignment on ma.
+   */
+   li    \temp, PG_LEVEL\level\()_MASK
+   and   \temp, \temp, \ma
+   beqz  \temp, m\@_0
    fatal string_map_bad_align
 m\@_0:
+   /*
+    * There should be no existing mapping.
+    */
+    ld   \temp, (\entry_va)
+    beqz \temp, m\@_1
+    fatal string_map_exists
+m\@_1:
 #endif /* DEBUG */
-   mv   \temp, \ma
-   srli \temp, \temp, PG_ENT_PPN_SHIFT
-   ori  \temp, \temp, PG_ENT_VALID
-   ori  \temp, \temp, PG_ENT_READ | PG_ENT_WRITE | PG_ENT_EXECUTE
-   sd   \temp, (\entry_va)
+   mv    \temp, \ma
+   srli  \temp, \temp, PG_ENT_PPN_SHIFT
+   ori   \temp, \temp, PG_ENT_VALID
+   .if \r != 0
+      ori \temp, \temp, PG_ENT_READ
+   .endif
+   .if \w != 0
+      ori \temp, \temp, PG_ENT_WRITE
+   .endif
+   .if \x != 0
+      ori \temp, \temp, PG_ENT_EXECUTE
+   .endif
+   sd    \temp, (\entry_va)
 .endm
 
    .section .rodata
 debug_asciz string_map_bad_align "Unaligned MA for mapping"
+debug_asciz string_map_exists    "Mapping exists"
 debug_asciz string_mapped1       "\nMapping 0x"
 debug_asciz string_mapped2       "with PTE 0x"
 debug_asciz string_satp57        "\nSv57 SATP = 0x"
@@ -142,7 +172,28 @@ debug_asciz string_no_satp       "\nUnsupported MMU"
    .section .text
 
 /*
- * Enable the MMU, mapping the kernel (only).
+ * Identity maps a physical address using a 4K page for
+ * device access.
+ *
+ * Inputs:
+ *    a0: physical address (4K aligned).
+ */
+aabi_defun_global name=mmu_map_device, nargs=1, nrets=0
+   debug_string_reg str=string_mapped1, reg=a0
+   la   a1, mmu_root
+   ld   a1, (a1)
+   mmu_va_2_tab tab_va=a1, va=a0, level=4, temp=t0, next_tab_va=a1
+   mmu_va_2_tab tab_va=a1, va=a0, level=3, temp=t0, next_tab_va=a1
+   mmu_va_2_tab tab_va=a1, va=a0, level=2, temp=t0, next_tab_va=a1
+   mmu_va_2_tab tab_va=a1, va=a0, level=1, temp=t0, next_tab_va=a1
+   mmu_va_2_entry tab_va=a1, va=a0, level=0, temp=t0, entry_va=a1
+   mmu_map_entry entry_va=a1, ma=a0, temp=t0, level=0, r=1, w=1, x=0
+   debug_string_dereg_val64 str=string_mapped2, reg=a1
+   sfence.vma
+aabi_retfun
+
+/*
+ * Enable the MMU, identity mapping the kernel (only).
  *
  * Automatically detects Sv57, Sv48 and Sv39.
  */
@@ -152,13 +203,16 @@ aabi_defun_global name=mmu_init, nargs=0, nrets=0
    push s9
    push s8
    /*
-    * L5 (root) in s11.
+    * L5 (root) in s11 and in mmu_root for later use.
     */
    aabi_call name=early_page_alloc, nargs=0, nrets=1
    mv   s11, a0
+   la   a0, mmu_root
+   sd   s11, (a0)
    /*
     * Map the kernel between _start and _end using megapages,
-    * with VA == PA.
+    * with VA == PA. _start must be well aligned for using
+    * megapages.
     */
    la   s10, _start
    la   s9, _end
@@ -169,11 +223,12 @@ map_megapage:
    mmu_va_2_tab tab_va=s8, va=s10, level=3, temp=a0, next_tab_va=s8
    mmu_va_2_tab tab_va=s8, va=s10, level=2, temp=a0, next_tab_va=s8
    mmu_va_2_entry tab_va=s8, va=s10, level=1, temp=a0, entry_va=s8
-   mmu_map_mega entry_va=s8, ma=s10, temp=a0
+   mmu_map_entry entry_va=s8, ma=s10, temp=a0, level=1, r=1, w=1, x=1
    debug_string_dereg_val64 str=string_mapped2, reg=s8
    li   a0, PG_LEVEL1_SIZE
    add  s10, s10, a0
    blt  s10, s9, map_megapage
+enable_mmu:
    /*
     * We don't know how many levels the CPU supports. So we probe.
     *

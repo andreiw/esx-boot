@@ -6,6 +6,7 @@ aabi_decl name=ebi_find, nargs=2, nrets=1
  * early-mmu.S
  */
 aabi_decl name=mmu_init nargs=0 nrets=0
+aabi_decl name=mmu_map_device nargs=1, nrets=0
 /*
  * early-pages.S
  */
