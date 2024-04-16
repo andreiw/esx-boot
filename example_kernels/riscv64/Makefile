@@ -63,13 +63,14 @@ log_clean_env:
 clean_env: log_clean_env clean
 	$(ECHO) "OLD_BUILD_ENV=$(BUILD_ENV)" > $(ENV_FILE)
 
-kernel.lds: asm-constants.h
-
-kernel.ld: kernel.lds
+kernel.ld: kernel.lds asm-constants.h
 	$(CC) -xc -E -P $(CFLAGS) -o $@ $<
+	$(ECHO) rebuilding $@
 
 asm-constants.h: asm-constants.c
-	$(CC) -MD $(CFLAGS) -S $< -o $@.p1
+	$(ECHO) rebuilding $@
+	$(CC) -MD $(CFLAGS) -S $< -o $@
+	mv $@ $@.p1
 	$(ECHO) \#ifndef __ASSEMBLER__ > $@.p2
 	grep \#define $@.p1 >> $@.p2
 	$(ECHO) \#else >> $@.p2
