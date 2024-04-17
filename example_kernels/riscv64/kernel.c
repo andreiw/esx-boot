@@ -10,14 +10,15 @@
 #define EBH_FEATS 3
 #define EBH_MAGIC ((uint32_t) (-(ESXBOOTINFO_MAGIC_V2 + sizeof (ebh) + EBH_FEATS)))
 /*
- * 2MiB (megapage) alignment.
+ * 2MiB (megapage) alignment for kernel. 4MiB alignment for modules just because.
  */
 #define LOAD_ALIGNMENT PG_LEVEL1_SIZE
+#define MODULE_ALIGNMENT 2 * PG_LEVEL1_SIZE
 
 struct ebh_s {
   ESXBootInfo_Header_V2 header;
   ESXBootInfo_FeatSerialCon feat_serial_con;
-  ESXBootInfo_FeatLoadAlign feat_load_align;
+  ESXBootInfo_FeatLoadOptions feat_load_options;
   ESXBootInfo_FeatCpuMode   feat_cpu_mode;
 } __attribute__((packed));
 
@@ -36,10 +37,12 @@ struct ebh_s ebh = {
       sizeof (ESXBootInfo_FeatSerialCon)
    },
    {
-      ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE,
+      ESXBOOTINFO_FEAT_LOAD_OPTIONS_TYPE,
       ESXBOOTINFO_FEAT_REQUIRED,
-      sizeof (ESXBootInfo_FeatLoadAlign),
-      LOAD_ALIGNMENT
+      sizeof (ESXBootInfo_FeatLoadOptions),
+      ESXBOOTINFO_FEAT_LOAD_OPTIONS_CONTIG,
+      LOAD_ALIGNMENT,
+      MODULE_ALIGNMENT
    },
    {
       ESXBOOTINFO_FEAT_CPU_MODE_TYPE,
@@ -83,6 +86,13 @@ c_main (ESXBootInfo *ebi)
       case ESXBOOTINFO_CPU_MODE_TYPE: {
          ESXBootInfo_CpuMode *cpu = (void *) elmt;
          printf ("Hart ID 0x%lx\n", cpu->hart_id);
+         break;
+      }
+      case ESXBOOTINFO_MODULE_TYPE: {
+         ESXBootInfo_Module *module = (void *) elmt;
+         if (module->numRanges != 0) {
+            printf ("Module at 0x%lx\n", module->ranges[0].startPageNum << PG_BASE_SHIFT);
+         }
          break;
       }
       default:

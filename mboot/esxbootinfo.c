@@ -269,7 +269,7 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
 
       switch (feat->feat_type) {
       case ESXBOOTINFO_FEAT_VIDEO_TYPE: {
-         if (feat->feat_size > sizeof (ESXBootInfo_FeatVideo)) {
+         if (feat->feat_size != sizeof (ESXBootInfo_FeatVideo)) {
             Log(LOG_ERR, "Unsupported FEAT_VIDEO size");
             return ERR_BAD_TYPE;
          }
@@ -279,7 +279,7 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
       case ESXBOOTINFO_FEAT_UEFI_TYPE: {
          ESXBootInfo_FeatUefi *uefi = (void *) feat;
 
-         if (feat->feat_size > sizeof (ESXBootInfo_FeatUefi)) {
+         if (feat->feat_size != sizeof (ESXBootInfo_FeatUefi)) {
            Log(LOG_ERR, "Unsupported FEAT_UEFI size");
            return ERR_BAD_TYPE;
          }
@@ -301,7 +301,7 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
       case ESXBOOTINFO_FEAT_TPM_TYPE: {
          ESXBootInfo_FeatTpm *tpm = (void *) feat;
 
-         if (feat->feat_size > sizeof (ESXBootInfo_FeatTpm)) {
+         if (feat->feat_size != sizeof (ESXBootInfo_FeatTpm)) {
             Log(LOG_ERR, "Unsupported FEAT_TPM size");
             return ERR_BAD_TYPE;
          }
@@ -309,21 +309,27 @@ static int check_esxbootinfo_v2(ESXBootInfo_Header *ebh)
          boot.tpm_measure = (tpm->tpm_measure & ESXBOOTINFO_TPM_MEASURE_V1) != 0;
          break;
       }
-      case ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE: {
-         ESXBootInfo_FeatLoadAlign *load_align = (void *) feat;
+      case ESXBOOTINFO_FEAT_LOAD_OPTIONS_TYPE: {
+         ESXBootInfo_FeatLoadOptions *load_options = (void *) feat;
 
-         if (feat->feat_size > sizeof (ESXBootInfo_FeatLoadAlign)) {
-            Log(LOG_ERR, "Unsupported FEAT_LOAD_ALIGN size");
+         if (feat->feat_size != sizeof (ESXBootInfo_FeatLoadOptions)) {
+            Log(LOG_ERR, "Unsupported FEAT_LOAD_OPTIONS size");
             return ERR_BAD_TYPE;
          }
 
-         boot.kernel_load_align = load_align->load_align;
+         boot.kernel_load_align = load_options->kernel_load_align;
+         boot.module_load_align = load_options->module_load_align;
+         /*
+          * Don't need to worry about ESXBOOTINFO_FEAT_LOAD_OPTIONS_CONTIG
+          * as mboot *always* loads modules into a physically contiguous
+          * range.
+          */
          break;
       }
       case ESXBOOTINFO_FEAT_SERIAL_CON_TYPE: {
          uart_t *uart;
 
-         if (feat->feat_size > sizeof (ESXBootInfo_FeatSerialCon)) {
+         if (feat->feat_size != sizeof (ESXBootInfo_FeatSerialCon)) {
             Log(LOG_ERR, "Unsupported ESXBOOTINFO_FEAT_SERIAL_CON_TYPE size");
             return ERR_BAD_TYPE;
          }

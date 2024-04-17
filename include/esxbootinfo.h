@@ -143,7 +143,7 @@ typedef enum ESXBootInfo_FeatType {
    ESXBOOTINFO_FEAT_UEFI_TYPE,
    ESXBOOTINFO_FEAT_OS_PRIVATE_TYPE,
    ESXBOOTINFO_FEAT_TPM_TYPE,
-   ESXBOOTINFO_FEAT_LOAD_ALIGN_TYPE,
+   ESXBOOTINFO_FEAT_LOAD_OPTIONS_TYPE,
    ESXBOOTINFO_FEAT_SERIAL_CON_TYPE,
    NUM_ESXBOOTINFO_FEAT_TYPE
 } ESXBootInfo_FeatType;
@@ -208,12 +208,33 @@ typedef struct ESXBootInfo_FeatTpm {
    uint32_t tpm_measure;     /* TPM: determine what bootloader measures */
 } __attribute__((packed)) ESXBootInfo_FeatTpm;
 
-typedef struct ESXBootInfo_FeatLoadAlign {
+/*
+ * When set, modules will be loaded into a contiguous physical range,
+ * e.g. ESXBootInfo_Module::numRanges == 1.
+ */
+#define ESXBOOTINFO_FEAT_LOAD_OPTIONS_CONTIG (1 << 0)
+
+typedef struct ESXBootInfo_FeatLoadOptions {
    ESXBootInfo_FeatType feat_type;
    uint32_t feat_flags;
    uint32_t feat_size;
-   uint32_t load_align;
-} __attribute__((packed)) ESXBootInfo_FeatLoadAlign;
+   /*
+    * These flags are valid to be used here:
+    *    ESXBOOTINFO_FEAT_LOAD_OPTIONS_CONTIG
+    */
+   uint32_t flags;
+   /*
+    * If 0, load at linked address. Otherwise, load at an address
+    * aligned to kernel_load_align. On x86/x64, this is an address
+    * below 4GiB.
+    */
+   uint32_t kernel_load_align;
+   /*
+    * If 0, load at the default alignment (4096). Otherwise, load at
+    * an address aligned to module_load_align.
+    */
+   uint32_t module_load_align;
+} __attribute__((packed)) ESXBootInfo_FeatLoadOptions;
 
 typedef struct ESXBootInfo_FeatSerialCon {
    ESXBootInfo_FeatType feat_type;
@@ -473,9 +494,9 @@ typedef struct ESXBootInfo_CpuMode {
  *  - ESXBootInfo address: PA (physical address).
  *
  * Version ESXBOOTINFO_MAGIC_V2:
- *  - FEAT_LOAD_ALIGN missing: loaded at linked address.
- *  - FEAT_LOAD_ALIGN load_align == 0: loaded at linked address.
- *  - FEAT_LOAD_ALIGN load_align != 0: loaded at load_align-aligned
+ *  - FEAT_LOAD_OPTIONS missing: loaded at linked address.
+ *  - FEAT_LOAD_OPTIONS kernel_load_align == 0: loaded at linked address.
+ *  - FEAT_LOAD_OPTIONS kernel_load_align != 0: loaded at aligned
  *                                     address. On x86/x64, this
  *                                     address is below 4GiB.
  *  - ESXBootInfo address: VA (virtual address).

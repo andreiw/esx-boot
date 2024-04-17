@@ -20,7 +20,7 @@ string_panic: .asciz            "\nPanic RA=0x"
 /*
  * Entry point into the "kernel".
  *
- * Loaded anywhere that's aligned to the expose FEAT_LOAD_ALIGN
+ * Loaded anywhere that's aligned to the expose FEAT_LOAD_OPTIONS
  * (see kernel.c) - _NOT_ at the linked address.
  *
  * MMU may be on, in which case VA may != PA, but

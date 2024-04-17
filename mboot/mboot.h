@@ -64,7 +64,7 @@ int firmware_shutdown(e820_range_t **mmap, size_t *count, efi_info_t *efi_info);
    add_runtime_object('s', (_src_), (_size_), 0, (_align_))
 
 #define add_module_object(_src_, _size_)                             \
-   add_runtime_object('m', (_src_), (_size_), 0, ALIGN_PAGE)
+   add_runtime_object('m', (_src_), (_size_), 0, boot.module_load_align ?: ALIGN_PAGE)
 
 #define add_safe_object(_src_, _size_, _align_)                      \
    add_runtime_object('t', (_src_), (_size_), 0, (_align_))
@@ -173,6 +173,7 @@ typedef struct {
    uint32_t kernel_load_align; /* If not 0, use this alignment (in bytes)
                                   for allocating memory. If 0, use fixed
                                   (link) address for loading. */
+   uint32_t module_load_align; /* Module alignment. If 0, use default. */
    void *kernel_header;       /* Multiboot/esxbootinfo kernle header. */
    uint32_t boot_magic;       /* Multiboot/esxbootinfo struct magic
                                  reported by bootloader. */
