@@ -26,3 +26,7 @@ aabi_decl name=sbi_putchar nargs=1 nrets=0
 aabi_decl name=sbi_putstring nargs=1 nrets=0
 aabi_decl name=sbi_puthex64 nargs=1 nrets=0
 aabi_decl name=sbi_shutdown nargs=0 nrets=0
+/*
+ * trap.S
+ */
+aabi_decl name=trap_init nargs=0 nrets=0

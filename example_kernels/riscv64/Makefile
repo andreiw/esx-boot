@@ -97,7 +97,7 @@ asm-constants.h: asm-constants.c
    -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
    rm -f $*.d
 
-kernel.elf: kernel.ld asm-constants.h entry.o early-ebi.o early-relocs.o early-pages.o early-mmu.o kernel.o printf.o sbi.o
+kernel.elf: kernel.ld asm-constants.h entry.o early-ebi.o early-relocs.o early-pages.o early-mmu.o kernel.o printf.o sbi.o trap.o
 	$(LINKER) $(CFLAGS) $(LDFLAGS) -o $@ -T $^
 
 -include *.P

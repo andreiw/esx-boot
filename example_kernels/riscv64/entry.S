@@ -78,6 +78,11 @@ entry:
 2:
 
 /*
+ * Exception handling.
+ */
+  aabi_call name=trap_init, nargs=0, nrets=0
+
+/*
  * Initialize MMU with identity mapping of the kernel.
  */
   aabi_call name=mmu_init, nargs=0, nrets=0
@@ -112,13 +117,16 @@ entry:
    debug_string string_go_c
    mv   a0, s10
    cabi_call c_main
-   aabi_call name=sbi_shutdown, nargs=0, nrets=0
+
+/*
+ * Break on purpose.
+ */
+   ebreak
 
 /*
  * Fatal error handling.
  *
  * Outputs: Doesn't return.
- * Clobbers: a0, a1.
  */
 aabi_defun_global name=panic, nargs=0, nrets=0
    mv  a1, ra
