@@ -85,4 +85,4 @@ typedef struct elf64_rela {
 #define PG_ENT_EXECUTE             (1UL << 3)
 
 DECLARE_AABI_CALL(void, sbi_putchar, 1, 0)(char ch);
-int printf(char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+int printf(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
