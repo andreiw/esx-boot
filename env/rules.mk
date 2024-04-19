@@ -34,11 +34,19 @@ $(ODIR)/%.c: %.json $(TOPDIR)/env/getkeys.py
 
 $(ODIR)/%.o: %.c
 	$(call printcmd,CC)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) -MD $(CFLAGS) -c -o $@ $<
+	cp $(ODIR)/$*.d $(ODIR)/$*.P; \
+   sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+   -e '/^$$/ d' -e 's/$$/ :/' < $(ODIR)/$*.d >> $(ODIR)/$*.P; \
+   rm -f $(ODIR)/$*.d
 
 $(ODIR)/%.o: %.S
 	$(call printcmd,GAS)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) -MD $(CFLAGS) -c -o $@ $<
+	cp $(ODIR)/$*.d $(ODIR)/$*.P; \
+   sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+   -e '/^$$/ d' -e 's/$$/ :/' < $(ODIR)/$*.d >> $(ODIR)/$*.P; \
+   rm -f $(ODIR)/$*.d
 
 $(ODIR)/%.o: %.s
 	$(call printcmd,AS)
@@ -93,3 +101,5 @@ dirs:
 	$(call MKDIR,$(BUILD_DIR))
 	$(call MKDIR,$(ODIR))
 	$(call MKDIR,$(ODIR)/$(IARCH))
+
+-include $(ODIR)/*.P
