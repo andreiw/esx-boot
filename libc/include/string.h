@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2011,2015 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -20,6 +21,7 @@ EXTERN char *strchr(const char *, int);
 EXTERN char *strrchr(const char *, int);
 EXTERN int strcmp(const char *, const char *);
 EXTERN char *strcpy(char *, const char *);
+EXTERN char *strncpy(char *dest, const char *src, size_t n);
 EXTERN size_t strlen(const char *);
 EXTERN size_t strnlen(const char *, size_t);
 EXTERN int strncmp(const char *, const char *, size_t);

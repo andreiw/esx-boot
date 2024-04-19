@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2015,2021 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -40,6 +41,27 @@ static uint8_t ns16550_read(const uart_t *dev, uint16_t reg)
 static void ns16550_write(const uart_t *dev, uint16_t reg, uint8_t val)
 {
    io_write(&dev->io, reg, val);
+}
+
+/*-- ns16550_getc --------------------------------------------------------------
+ *
+ *      Read a character from a serial port.
+ *
+ * Parameters
+ *      IN dev: pointer to a UART descriptor
+ *      IN c:   pointer to memory, where to store the read character
+ *
+ * Results:
+ *      ERR_SUCCSES or ERR_NOT_READY.
+ *----------------------------------------------------------------------------*/
+static int ns16550_getc(const uart_t *dev, char *c)
+{
+   if ((ns16550_read(dev, NS16550_LSR) & NS16550_LSR_DR) != 0) {
+      *c = ns16550_read(dev, NS16550_RX);
+      return ERR_SUCCESS;
+   }
+
+   return ERR_NOT_READY;
 }
 
 /*-- ns16550_putc --------------------------------------------------------------
@@ -144,5 +166,6 @@ int ns16550_init(uart_t *dev)
    c = ns16550_read(dev, NS16550_LSR);
 
    dev->putc = ns16550_putc;
+   dev->getc = ns16550_getc;
    return ERR_SUCCESS;
 }

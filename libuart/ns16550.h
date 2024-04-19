@@ -37,6 +37,7 @@
 #define NS16550_MSR_CTS          (1 << 4)  /* Clear to Send */
 #define NS16550_MSR_DCD          (1 << 7)  /* Data Carrier Detect */
 
+#define NS16550_LSR_DR           (1 << 0)  /* Data Ready */
 #define NS16550_LSR_THRE         (1 << 5)  /* Transmit-hold-register empty */
 
 #endif /* NS16550_H */

@@ -27,7 +27,11 @@ SUBDIRS    := $(SHAREDLIBS) \
               $(FIRMWARE)   \
               tests         \
               mboot         \
-              safeboot
+              safeboot      \
+
+ifeq ($(ARCH),riscv64)
+SUBDIRS += pboot
+endif
 
 # Building rules
 .PHONY: all clean $(SUBDIRS)
@@ -42,7 +46,7 @@ menu: check_env
 	@$(MAKE) -C uefi menu
 
 # Dependencies
-tests mboot safeboot: $(SHAREDLIBS) $(FIRMWARE)
+tests mboot safeboot pboot: $(SHAREDLIBS) $(FIRMWARE)
 $(FIRMWARE): $(SHAREDLIBS)
 
 # Cleaning rules

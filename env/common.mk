@@ -138,7 +138,7 @@ ifeq ($(DEBUG),1)
 CFLAGS    += -DDEBUG
 endif
 
-CFLAGS     += --sysroot=$(GCCROOT) -Donly_$(ARCH) -Donly_$(IARCH)            \
+CFLAGS     += -std=c99 --sysroot=$(GCCROOT) -Donly_$(ARCH) -Donly_$(IARCH)            \
               -DVMWARE_EDK2_CHANGES                                          \
               -ffreestanding -fno-exceptions                                 \
                                                                              \

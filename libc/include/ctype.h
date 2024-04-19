@@ -1,5 +1,6 @@
 /*******************************************************************************
  * Copyright (c) 2008-2011,2021 VMware, Inc.  All rights reserved.
+ * Copyright (c) 2024, Intel Corporation. All rights reserved.
  * SPDX-License-Identifier: GPL-2.0
  ******************************************************************************/
 
@@ -24,6 +25,11 @@
 #define C_GRAPH  (C_PUNCT | C_ALNUM)
 
 EXTERN const unsigned char libc_ctype[256];
+
+static INLINE int iscntrl(int c)
+{
+   return libc_ctype[c] == C_CTRL;
+}
 
 static INLINE int isspace(int c)
 {
