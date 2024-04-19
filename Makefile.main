@@ -42,7 +42,7 @@ menu: check_env
 	@$(MAKE) -C uefi menu
 
 # Dependencies
-mboot safeboot: $(SHAREDLIBS) $(FIRMWARE)
+tests mboot safeboot: $(SHAREDLIBS) $(FIRMWARE)
 $(FIRMWARE): $(SHAREDLIBS)
 
 # Cleaning rules
