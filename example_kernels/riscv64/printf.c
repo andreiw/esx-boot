@@ -46,21 +46,23 @@
 #define simple_putchar AABI_CALL(sbi_putchar, 1, 0)
 #endif
 
-static bool simple_outputchar(char **str, size_t len, int *offset, char c)
+static bool
+simple_outputchar(char **str, size_t len,
+                  int *offset, char c)
 {
-  if (*offset >= len) {
-    return false;
-  }
+   if (*offset >= len) {
+      return false;
+   }
 
-  if (str) {
-    **str = c;
-    ++(*str);
-  } else {
-    simple_putchar(c);
-  }
+   if (str) {
+      **str = c;
+      ++(*str);
+   } else {
+      simple_putchar(c);
+   }
 
-  *offset = *offset + 1;
-  return true;
+   *offset = *offset + 1;
+   return true;
 }
 
 enum flags {
@@ -69,7 +71,9 @@ enum flags {
    PRE_OX = 4,
 };
 
-static bool prints(char **out, size_t len, int *offset, const char *string, int width, int flags)
+static bool
+prints(char **out, size_t len, int *offset,
+       const char *string, int width, int flags)
 {
    int padchar = ' ';
 
@@ -84,20 +88,20 @@ static bool prints(char **out, size_t len, int *offset, const char *string, int 
    }
    if (!(flags & PAD_RIGHT)) {
       for ( ; width > 0; --width) {
-        if (!simple_outputchar(out, len, offset, padchar)) {
-          return false;
-        }
+         if (!simple_outputchar(out, len, offset, padchar)) {
+            return false;
+         }
       }
    }
    for ( ; *string ; ++string) {
-     if (!simple_outputchar(out, len, offset, *string)) {
-       return false;
-     }
+      if (!simple_outputchar(out, len, offset, *string)) {
+         return false;
+      }
    }
    for ( ; width > 0; --width) {
-     if (!simple_outputchar(out, len, offset, padchar)) {
-       return false;
-     }
+      if (!simple_outputchar(out, len, offset, padchar)) {
+         return false;
+      }
    }
 
    return true;
@@ -105,12 +109,17 @@ static bool prints(char **out, size_t len, int *offset, const char *string, int 
 
 #define PRINT_BUF_LEN 64
 
-static bool simple_outputi(char **out, size_t len, int *offset, long long i, int base, int sign, int width, int flags, int letbase)
+static bool
+simple_outputi(char **out, size_t len,
+               int *offset, intmax_t i,
+               int base, bool sign,
+               int width, int flags,
+               int letbase)
 {
    char print_buf[PRINT_BUF_LEN];
    char *s;
    int t, neg = 0;
-   unsigned long long u = i;
+   uintmax_t u = i;
 
    if (i == 0) {
       print_buf[0] = '0';
@@ -164,30 +173,23 @@ static bool simple_outputi(char **out, size_t len, int *offset, long long i, int
    return prints (out, len, offset, s, width, flags);
 }
 
-static int simple_vsnprintf(char **out, size_t len, const char *format, va_list ap)
+static int
+simple_vsnprintf(char **out, size_t len,
+                 const char *format, va_list ap)
 {
    int width, flags;
    int pc = 0;
    char scr[2];
    bool cont;
-   union {
-      char c;
-      char *s;
-      int i;
-      unsigned int u;
-      long li;
-      unsigned long lu;
-      long long lli;
-      unsigned long long llu;
-      short hi;
-      unsigned short hu;
-      signed char hhi;
-      unsigned char hhu;
-      uintptr_t ptr;
-   } u;
+   uintmax_t u;
 
    for (cont = true; cont && *format != 0; ++format) {
       if (*format == '%') {
+         bool do_num = false;
+         bool num_sign = false;
+         int num_base = 10;
+         bool num_caps = false;
+
          ++format;
          width = flags = 0;
          if (*format == '\0')
@@ -213,87 +215,86 @@ static int simple_vsnprintf(char **out, size_t len, const char *format, va_list 
          }
          switch (*format) {
          case('d'):
-            u.i = va_arg(ap, int);
-            cont = simple_outputi(out, len, &pc, u.i, 10, 1, width, flags, 'a');
+            u = va_arg(ap, int);
+            num_sign = true;
+            do_num = true;
             break;
 
          case('u'):
-            u.u = va_arg(ap, unsigned int);
-            cont = simple_outputi(out, len, &pc, u.u, 10, 0, width, flags, 'a');
-            break;
-
-         case('x'):
-            u.u = va_arg(ap, unsigned int);
-            cont = simple_outputi(out, len, &pc, u.u, 16, 0, width, flags, 'a');
+            u = va_arg(ap, unsigned int);
+            do_num = true;
             break;
 
          case('X'):
-            u.u = va_arg(ap, unsigned int);
-            cont = simple_outputi(out, len, &pc, u.u, 16, 0, width, flags, 'A');
+            num_caps = true;
+         case('x'):
+            u = va_arg(ap, unsigned int);
+            num_base = 16;
+            do_num = true;
             break;
 
          case('c'):
-            u.c = va_arg(ap, int);
-            scr[0] = u.c;
+            u = va_arg(ap, int);
+            scr[0] = u;
             scr[1] = '\0';
             cont = prints(out, len, &pc, scr, width, flags);
             break;
 
          case('s'):
-            u.s = va_arg(ap, char *);
-            cont = prints(out, len, &pc, u.s ? u.s : "(null)", width, flags);
+            u = (uintmax_t) va_arg(ap, char *);
+            cont = prints(out, len, &pc, u ? (char *) u : "(null)",
+                          width, flags);
             break;
 
          case('p'):
-            u.ptr = va_arg(ap, uintptr_t);
-            cont = simple_outputi(out, len, &pc, u.ptr, 16, 0, width,
-                                  flags | PRE_OX, 'a');
+            u = va_arg(ap, uintptr_t);
+            num_base = 16;
+            do_num = true;
+            flags |= PRE_OX;
             break;
 
          case('l'):
             ++format;
             switch (*format) {
             case('d'):
-               u.li = va_arg(ap, long);
-               cont = simple_outputi(out, len, &pc, u.li, 10, 1, width, flags, 'a');
+               u = va_arg(ap, long);
+               num_sign = true;
+               do_num = true;
                break;
 
             case('u'):
-               u.lu = va_arg(ap, unsigned long);
-               cont = simple_outputi(out, len, &pc, u.lu, 10, 0, width, flags, 'a');
-               break;
-
-            case('x'):
-               u.lu = va_arg(ap, unsigned long);
-               cont = simple_outputi(out, len, &pc, u.lu, 16, 0, width, flags, 'a');
+               u = va_arg(ap, unsigned long);
+               do_num = true;
                break;
 
             case('X'):
-               u.lu = va_arg(ap, unsigned long);
-               cont = simple_outputi(out, len, &pc, u.lu, 16, 0, width, flags, 'A');
+               num_caps = true;
+            case('x'):
+               u = va_arg(ap, unsigned long);
+               num_base = 16;
+               do_num = true;
                break;
 
             case('l'):
                ++format;
                switch (*format) {
                case('d'):
-                  u.lli = va_arg(ap, long long);
-                  cont = simple_outputi(out, len, &pc, u.lli, 10, 1, width, flags, 'a');
+                  u = va_arg(ap, long long);
+                  num_sign = true;
+                  do_num = true;
                   break;
 
                case('u'):
-                  u.llu = va_arg(ap, unsigned long long);
-                  cont = simple_outputi(out, len, &pc, u.llu, 10, 0, width, flags, 'a');
-                  break;
-
-               case('x'):
-                  u.llu = va_arg(ap, unsigned long long);
-                  cont = simple_outputi(out, len, &pc, u.llu, 16, 0, width, flags, 'a');
+                  u = va_arg(ap, unsigned long long);
+                  do_num = true;
                   break;
 
                case('X'):
-                  u.llu = va_arg(ap, unsigned long long);
-                  cont = simple_outputi(out, len, &pc, u.llu, 16, 0, width, flags, 'A');
+                  num_caps = true;
+               case('x'):
+                  u = va_arg(ap, unsigned long long);
+                  num_base = 16;
+                  do_num = true;
                   break;
 
                default:
@@ -308,46 +309,44 @@ static int simple_vsnprintf(char **out, size_t len, const char *format, va_list 
             ++format;
             switch (*format) {
             case('d'):
-               u.hi = va_arg(ap, int);
-               cont = simple_outputi(out, len, &pc, u.hi, 10, 1, width, flags, 'a');
+               u = va_arg(ap, int);
+               num_sign = true;
+               do_num = true;
                break;
 
             case('u'):
-               u.hu = va_arg(ap, unsigned int);
-               cont = simple_outputi(out, len, &pc, u.lli, 10, 0, width, flags, 'a');
-               break;
-
-            case('x'):
-               u.hu = va_arg(ap, unsigned int);
-               cont = simple_outputi(out, len, &pc, u.lli, 16, 0, width, flags, 'a');
+               u = va_arg(ap, unsigned int);
+               do_num = true;
                break;
 
             case('X'):
-               u.hu = va_arg(ap, unsigned int);
-               cont = simple_outputi(out, len, &pc, u.lli, 16, 0, width, flags, 'A');
+               num_caps = true;
+            case('x'):
+               u = va_arg(ap, unsigned int);
+               num_base = 16;
+               do_num = true;
                break;
 
             case('h'):
                ++format;
                switch (*format) {
                case('d'):
-                  u.hhi = va_arg(ap, int);
-                  cont = simple_outputi(out, len, &pc, u.hhi, 10, 1, width, flags, 'a');
+                  u = va_arg(ap, int);
+                  num_sign = true;
+                  do_num = true;
                   break;
 
                case('u'):
-                  u.hhu = va_arg(ap, unsigned int);
-                  simple_outputi(out, len, &pc, u.lli, 10, 0, width, flags, 'a');
-                  break;
-
-               case('x'):
-                  u.hhu = va_arg(ap, unsigned int);
-                  cont = simple_outputi(out, len, &pc, u.lli, 16, 0, width, flags, 'a');
+                  u = va_arg(ap, unsigned int);
+                  do_num = true;
                   break;
 
                case('X'):
-                  u.hhu = va_arg(ap, unsigned int);
-                  cont = simple_outputi(out, len, &pc, u.lli, 16, 0, width, flags, 'A');
+                  num_caps = true;
+               case('x'):
+                  u = va_arg(ap, unsigned int);
+                  num_base = 16;
+                  do_num = true;
                   break;
 
                default:
@@ -361,8 +360,12 @@ static int simple_vsnprintf(char **out, size_t len, const char *format, va_list 
          default:
             break;
          }
-      }
-      else {
+
+         if (do_num) {
+            cont = simple_outputi(out, len, &pc, u, num_base, num_sign,
+                                  width, flags, num_caps ? 'A' : 'a');
+         }
+      } else {
       out:
          cont = simple_outputchar (out, len, &pc, *format);
       }
@@ -374,7 +377,8 @@ static int simple_vsnprintf(char **out, size_t len, const char *format, va_list 
 }
 
 __attribute__ ((format (printf, 1, 2)))
-int simple_printf(const char *fmt, ...)
+int
+simple_printf(const char *fmt, ...)
 {
    va_list ap;
    int r;
@@ -387,7 +391,8 @@ int simple_printf(const char *fmt, ...)
 }
 
 __attribute__ ((format (printf, 2, 3)))
-int simple_sprintf(char *buf, const char *fmt, ...)
+int
+simple_sprintf(char *buf, const char *fmt, ...)
 {
    va_list ap;
    int r;
@@ -400,7 +405,8 @@ int simple_sprintf(char *buf, const char *fmt, ...)
 }
 
 __attribute__ ((format (printf, 3, 4)))
-int simple_snprintf(char *buf, size_t size, const char *fmt, ...)
+int
+simple_snprintf(char *buf, size_t size, const char *fmt, ...)
 {
    va_list ap;
    int r;
@@ -417,8 +423,10 @@ int simple_snprintf(char *buf, size_t size, const char *fmt, ...)
 #define printf simple_printf
 #define sprintf simple_sprintf
 #define snprintf simple_snprintf
+#define simple_vsnprintf vsnprintf
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
    int ret;
    int line;
@@ -468,14 +476,14 @@ int main(int argc, char *argv[])
    buf[5] = '?';
    TSN(buf, 5, "%d", -2345);
    if (buf[5] != '?') {
-     fprintf(stderr, "L%u: corrupted buf\n", __LINE__);
+      fprintf(stderr, "L%u: corrupted buf\n", __LINE__);
    }
    buf[5] = '\0';
    printf("snprintf: '%s'\n", buf);
    buf[5] = '?';
    TSN(buf, 6, "%d", -2345);
    if (buf[5] != '\0') {
-     fprintf(stderr, "L%u: corrupted buf\n", __LINE__);
+      fprintf(stderr, "L%u: corrupted buf\n", __LINE__);
    }
 
 #undef T
