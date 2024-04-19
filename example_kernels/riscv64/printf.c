@@ -388,57 +388,52 @@ int simple_sprintf(char *buf, char *fmt, ...)
 
 int main(int argc, char *argv[])
 {
+   int ret;
+   int line;
    static char shortstr[] = "Test";
    char buf[256];
 
-   printf("percent:                \"%%\"\n");
-   printf("bad format:             \"%z\"\n");
-   printf("\n");
-   printf("decimal:                \"%d\"\n", 12345);
-   printf("decimal negative:       \"%d\"\n", -2345);
-   printf("\n");
-   printf("unsigned:               \"%u\"\n", 12345);
-   printf("unsigned negative:      \"%u\"\n", -2345);
-   printf("\n");
-   printf("hex:                    \"%x\"\n", 0x12345);
-   printf("hex negative:           \"%x\"\n", -0x12345);
-   printf("\n");
-   printf("long decimal:           \"%ld\"\n", 123456L);
-   printf("long decimal negative:  \"%ld\"\n", -23456L);
-   printf("\n");
-   printf("long unsigned:          \"%lu\"\n", 123456L);
-   printf("long unsigned negative: \"%lu\"\n", -123456L);
-   printf("\n");
-   printf("long hex:               \"%lx\"\n", 0x12345L);
-   printf("long hex negative:      \"%lx\"\n", -0x12345L);
-   printf("\n");
-   printf("long long decimal:           \"%lld\"\n", 123456LL);
-   printf("long long decimal negative:  \"%lld\"\n", -23456LL);
-   printf("\n");
-   printf("long long unsigned:          \"%llu\"\n", 123456LL);
-   printf("long long unsigned negative: \"%llu\"\n", -123456LL);
-   printf("\n");
-   printf("long long hex:               \"%llx\"\n", 0x12345LL);
-   printf("long long hex negative:      \"%llx\"\n", -0x12345LL);
-   printf("\n");
-   printf("zero-padded LD:         \"%010ld\"\n", (long) 123456);
-   printf("zero-padded LDN:        \"%010ld\"\n", (long) -123456);
-   printf("left-adjusted ZLDN:     \"%-010ld\"\n", (long) -123456);
-   printf("space-padded LDN:       \"%10ld\"\n", (long) -123456);
-   printf("left-adjusted SLDN:     \"%-10ld\"\n", (long) -123456);
-   printf("\n");
-   printf("variable pad width:     \"%0*d\"\n", 15, -2345);
-   printf("\n");
-   printf("char:                   \"%c%c%c%c\"\n", 'T', 'e', 's', 't');
-   printf("\n");
-   printf("zero-padded string:     \"%010s\"\n", shortstr);
-   printf("left-adjusted Z string: \"%-010s\"\n", shortstr);
-   printf("space-padded string:    \"%10s\"\n", shortstr);
-   printf("left-adjusted S string: \"%-10s\"\n", shortstr);
-   printf("null string:            \"%s\"\n", (char *)NULL);
-   printf("pointer:                \"%p\"\n", (void *) 0x1234);
+#define T(x, ...) ret = printf(x, ## __VA_ARGS__); printf("+L%u: %d chars\n", __LINE__ - line, ret);
+#define TS(b, x, ...) ret = sprintf(b, x, ## __VA_ARGS__); printf("+L%u: %d chars\n", __LINE__ - line,ret);
+   line = __LINE__;
+   T("percent:                \"%%\"\n");
+   T("bad format:             \"%z\"\n");
+   T("decimal:                \"%d\"\n", 12345);
+   T("decimal negative:       \"%d\"\n", -2345);
+   T("unsigned:               \"%u\"\n", 12345);
+   T("unsigned negative:      \"%u\"\n", -2345);
+   T("hex:                    \"%x\"\n", 0x12345);
+   T("hex negative:           \"%x\"\n", -0x12345);
+   T("long decimal:           \"%ld\"\n", 123456L);
+   T("long decimal negative:  \"%ld\"\n", -23456L);
+   T("long unsigned:          \"%lu\"\n", 123456L);
+   T("long unsigned negative: \"%lu\"\n", -123456L);
+   T("long hex:               \"%lx\"\n", 0x12345L);
+   T("long hex negative:      \"%lx\"\n", -0x12345L);
+   T("long long decimal:           \"%lld\"\n", 123456LL);
+   T("long long decimal negative:  \"%lld\"\n", -23456LL);
+   T("long long unsigned:          \"%llu\"\n", 123456LL);
+   T("long long unsigned negative: \"%llu\"\n", -123456LL);
+   T("long long hex:               \"%llx\"\n", 0x12345LL);
+   T("long long hex negative:      \"%llx\"\n", -0x12345LL);
+   T("zero-padded LD:         \"%010ld\"\n", (long) 123456);
+   T("zero-padded LDN:        \"%010ld\"\n", (long) -123456);
+   T("left-adjusted ZLDN:     \"%-010ld\"\n", (long) -123456);
+   T("space-padded LDN:       \"%10ld\"\n", (long) -123456);
+   T("left-adjusted SLDN:     \"%-10ld\"\n", (long) -123456);
+   T("variable pad width:     \"%0*d\"\n", 15, -2345);
+   T("char:                   \"%c%c%c%c\"\n", 'T', 'e', 's', 't');
+   T("zero-padded string:     \"%010s\"\n", shortstr);
+   T("left-adjusted Z string: \"%-010s\"\n", shortstr);
+   T("space-padded string:    \"%10s\"\n", shortstr);
+   T("left-adjusted S string: \"%-10s\"\n", shortstr);
+   T("null string:            \"%s\"\n", (char *)NULL);
+   T("pointer:                \"%p\"\n", (void *) 0x1234);
 
-   sprintf(buf, "decimal:\t\"%d\"\n", -2345);
-   printf("sprintf: %s", buf);
+   TS(buf, "decimal:\t\"%d\"\n", -2345);
+   T("sprintf: %s", buf);
+
+#undef T
+#undef TS
 }
 #endif /* TEST */
