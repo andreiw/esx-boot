@@ -17,6 +17,9 @@
 #include <uart.h>
 #include <cpu.h>
 #include <bootlib.h>
+#include "assert.h"
+
+#define TYPE_BITS(type) (sizeof(type) * 8)
 
 static inline void PANIC(void)
 {
@@ -29,3 +32,7 @@ static inline void PANIC(void)
 
 int mon_init(void);
 void mon_enter(void);
+
+#define PFN_SHIFT 12
+typedef uint64_t pfn_t;
+int pmem_init(efi_info_t *efi_info);

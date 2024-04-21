@@ -14,7 +14,8 @@ INC         += ./ $(ODIR)
 SRC         := pboot.c \
                zforth.c \
                setjmp.S \
-               mon.c
+               mon.c \
+               pmem.c \
 
 BASENAME    := pboot
 TARGETTYPE  := app

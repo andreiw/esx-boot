@@ -97,19 +97,19 @@ int main(int argc, char **argv)
 
    status = pboot_parse_args(argc, argv);
    if (status != ERR_SUCCESS) {
-      Log(LOG_EMERG, "%s: pboot_parse_args: %s", __FILE__, error_str[status]);
+      Log(LOG_EMERG, "%s: pboot_parse_args: %s", __FUNCTION__, error_str[status]);
       PANIC();
    }
 
    status = log_init(log_verbose);
    if (status != ERR_SUCCESS) {
-      Log(LOG_EMERG, "%s: log_init: %s", __FILE__, error_str[status]);
+      Log(LOG_EMERG, "%s: log_init: %s", __FUNCTION__, error_str[status]);
       PANIC();
    }
 
    status = serial_log_init(serial_com, serial_speed);
    if (status != ERR_SUCCESS) {
-      Log(LOG_EMERG, "%s: serial_log_init: %s", __FILE__,
+      Log(LOG_EMERG, "%s: serial_log_init: %s", __FUNCTION__,
           error_str[status]);
       PANIC();
    }
@@ -121,16 +121,25 @@ int main(int argc, char **argv)
 
    check_efi_quirks(&efi_info);
 
+   status = pmem_init(&efi_info);
+   if (status != ERR_SUCCESS) {
+      Log(LOG_EMERG, "%s: pmem_init failed: %s", __FUNCTION__,
+          error_str[status]);
+      PANIC();
+   }
+
    status = mon_init();
    if (status != ERR_SUCCESS) {
-      Log(LOG_EMERG, "mon_init failed: %s", error_str[status]);
+      Log(LOG_EMERG, "%s mon_init failed: %s",
+          __FUNCTION__, error_str[status]);
       PANIC();
    }
 
    Log(LOG_INFO, "Exiting boot services");
    status = exit_boot_services(0, &e820_mmap, &e820_count, &efi_info);
    if (status != ERR_SUCCESS) {
-      Log(LOG_EMERG, "exit_boot_services: %s", error_str[status]);
+      Log(LOG_EMERG, "%s: exit_boot_services: %s", __FUNCTION__,
+          error_str[status]);
       PANIC();
    }
 

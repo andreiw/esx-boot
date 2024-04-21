@@ -88,6 +88,7 @@
 #define STRINGIFY(arg) _STRINGIFY(arg)
 
 #define ROUNDDOWN(x,y)((x) / (y) * (y))
+#define ROUNDUP(x, y) ((((x) + (y) - 1) / (y)) * (y))
 
 /*
  * The main purpose of the uint64_generic_t type and the derived inline
