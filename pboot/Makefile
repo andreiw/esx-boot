@@ -10,7 +10,7 @@
 TOPDIR      := ..
 include common.mk
 
-INC         += ./ $(ODIR)
+INC         += ./ $(ODIR) $(UEFIINC)
 SRC         := pboot.c \
                zforth.c \
                setjmp.S \
